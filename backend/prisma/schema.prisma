@@ -1,0 +1,142 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  profile            Profile?
+  sentMessages       Message[]      @relation("MessageSender")
+  receivedMessages   Message[]      @relation("MessageReceiver")
+  matchesAsUser1     Match[]        @relation("MatchUser1")
+  matchesAsUser2     Match[]        @relation("MatchUser2")
+  savedProfiles      SavedProfile[] @relation("SavedProfiles")
+  connectionRequests Connection[]   @relation("ConnectionRequester")
+  connectionReceived Connection[]   @relation("ConnectionReceiver")
+  feedbackGiven      Feedback[]     @relation("FeedbackFrom")
+  feedbackReceived   Feedback[]     @relation("FeedbackTo")
+
+  @@map("users")
+}
+
+model Profile {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @unique @map("user_id")
+  name            String
+  age             Int
+  bio             String
+  location        String
+  profilePhotoUrl String?   @map("profile_photo_url")
+  gender          String?
+  profession      String?
+  budget          Int?
+  moveInDate      DateTime? @map("move_in_date")
+  smoking         Boolean?  @default(false)
+  drinking        String?   // "no", "occasionally", "socially", "regularly"
+  pets            Boolean?  @default(false)
+  cleanliness     String? // "very_clean", "clean", "moderate", "messy"
+  socialLevel     String? // "very_social", "social", "moderate", "quiet"
+  workFromHome    Boolean?  @default(false)
+  guests          String? // "frequent", "occasional", "rare", "never"
+  music           String? // "loud", "moderate", "quiet"
+  cooking         String? // "daily", "weekly", "rarely", "never"
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  savedBy SavedProfile[] @relation("SavedBy")
+
+  @@map("profiles")
+}
+
+model Match {
+  id        Int      @id @default(autoincrement())
+  user1Id   Int      @map("user1_id")
+  user2Id   Int      @map("user2_id")
+  status    String   @default("pending") // pending, matched, rejected
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user1 User @relation("MatchUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2 User @relation("MatchUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+
+  @@unique([user1Id, user2Id])
+  @@map("matches")
+}
+
+model Message {
+  id         Int      @id @default(autoincrement())
+  senderId   Int      @map("sender_id")
+  receiverId Int      @map("receiver_id")
+  content    String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  sender   User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model SavedProfile {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  profileId Int      @map("profile_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user    User    @relation("SavedProfiles", fields: [userId], references: [id], onDelete: Cascade)
+  profile Profile @relation("SavedBy", fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, profileId])
+  @@map("saved_profiles")
+}
+
+model Connection {
+  id          Int      @id @default(autoincrement())
+  requesterId Int      @map("requester_id")
+  receiverId  Int      @map("receiver_id")
+  status      String   @default("pending") // pending, accepted, rejected
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  requester User @relation("ConnectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver  User @relation("ConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, receiverId])
+  @@map("connections")
+}
+
+model Feedback {
+  id            Int      @id @default(autoincrement())
+  fromUserId    Int      @map("from_user_id")
+  toUserId      Int      @map("to_user_id")
+  rating        Int // 1-5 stars
+  comment       String?
+  cleanliness   Int? // 1-5 rating
+  communication Int? // 1-5 rating
+  reliability   Int? // 1-5 rating
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  fromUser User @relation("FeedbackFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("FeedbackTo", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId])
+  @@map("feedback")
+}
