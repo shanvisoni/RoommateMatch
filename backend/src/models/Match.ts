@@ -1,4 +1,4 @@
-import pool from '../config/database';
+import prisma from '../config/database';
 
 export interface Match {
   id: number;
@@ -18,69 +18,120 @@ export class MatchModel {
   static async create(matchData: CreateMatchData): Promise<Match> {
     const { user1_id, user2_id, status = 'pending' } = matchData;
     
-    const query = `
-      INSERT INTO matches (user1_id, user2_id, status)
-      VALUES ($1, $2, $3)
-      RETURNING *
-    `;
+    const match = await prisma.match.create({
+      data: {
+        user1Id: user1_id,
+        user2Id: user2_id,
+        status: status
+      }
+    });
     
-    const result = await pool.query(query, [user1_id, user2_id, status]);
-    return result.rows[0];
+    return {
+      id: match.id,
+      user1_id: match.user1Id,
+      user2_id: match.user2Id,
+      status: match.status as 'pending' | 'matched' | 'rejected',
+      created_at: match.createdAt
+    };
   }
 
   static async findExistingMatch(user1Id: number, user2Id: number): Promise<Match | null> {
-    const query = `
-      SELECT * FROM matches 
-      WHERE (user1_id = $1 AND user2_id = $2) 
-         OR (user1_id = $2 AND user2_id = $1)
-    `;
-    const result = await pool.query(query, [user1Id, user2Id]);
-    return result.rows[0] || null;
+    const match = await prisma.match.findFirst({
+      where: {
+        OR: [
+          { user1Id: user1Id, user2Id: user2Id },
+          { user1Id: user2Id, user2Id: user1Id }
+        ]
+      }
+    });
+    
+    if (!match) return null;
+    
+    return {
+      id: match.id,
+      user1_id: match.user1Id,
+      user2_id: match.user2Id,
+      status: match.status as 'pending' | 'matched' | 'rejected',
+      created_at: match.createdAt
+    };
   }
 
-  static async findUserMatches(userId: number): Promise<Match[]> {
-    const query = `
-      SELECT m.*, 
-             p1.name as user1_name, p1.profile_photo_url as user1_photo,
-             p2.name as user2_name, p2.profile_photo_url as user2_photo
-      FROM matches m
-      LEFT JOIN profiles p1 ON m.user1_id = p1.user_id
-      LEFT JOIN profiles p2 ON m.user2_id = p2.user_id
-      WHERE (m.user1_id = $1 OR m.user2_id = $1) 
-        AND m.status = 'matched'
-      ORDER BY m.created_at DESC
-    `;
-    const result = await pool.query(query, [userId]);
-    return result.rows;
+  static async findUserMatches(userId: number): Promise<any[]> {
+    const matches = await prisma.match.findMany({
+      where: {
+        OR: [
+          { user1Id: userId },
+          { user2Id: userId }
+        ],
+        status: 'matched'
+      },
+      include: {
+        user1: {
+          include: {
+            profile: true
+          }
+        },
+        user2: {
+          include: {
+            profile: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    
+    return matches.map(match => ({
+      id: match.id,
+      user1_id: match.user1Id,
+      user2_id: match.user2Id,
+      status: match.status,
+      created_at: match.createdAt,
+      user1_name: match.user1.profile?.name,
+      user1_photo: match.user1.profile?.profilePhotoUrl,
+      user2_name: match.user2.profile?.name,
+      user2_photo: match.user2.profile?.profilePhotoUrl
+    }));
   }
 
   static async findUserInteractions(userId: number): Promise<number[]> {
-    const query = `
-      SELECT DISTINCT 
-        CASE 
-          WHEN user1_id = $1 THEN user2_id
-          ELSE user1_id
-        END as other_user_id
-      FROM matches
-      WHERE user1_id = $1 OR user2_id = $1
-    `;
-    const result = await pool.query(query, [userId]);
-    return result.rows.map(row => row.other_user_id);
+    const matches = await prisma.match.findMany({
+      where: {
+        OR: [
+          { user1Id: userId },
+          { user2Id: userId }
+        ]
+      },
+      select: {
+        user1Id: true,
+        user2Id: true
+      }
+    });
+    
+    return matches.map(match => 
+      match.user1Id === userId ? match.user2Id : match.user1Id
+    );
   }
 
   static async updateStatus(matchId: number, status: 'pending' | 'matched' | 'rejected'): Promise<Match> {
-    const query = `
-      UPDATE matches 
-      SET status = $1
-      WHERE id = $2
-      RETURNING *
-    `;
-    const result = await pool.query(query, [status, matchId]);
-    return result.rows[0];
+    const match = await prisma.match.update({
+      where: { id: matchId },
+      data: { status }
+    });
+    
+    return {
+      id: match.id,
+      user1_id: match.user1Id,
+      user2_id: match.user2Id,
+      status: match.status as 'pending' | 'matched' | 'rejected',
+      created_at: match.createdAt
+    };
   }
 
   static async delete(matchId: number): Promise<void> {
-    const query = 'DELETE FROM matches WHERE id = $1';
-    await pool.query(query, [matchId]);
+    await prisma.match.delete({
+      where: { id: matchId }
+    });
   }
 }

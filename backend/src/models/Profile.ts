@@ -69,7 +69,7 @@ export class ProfileModel {
   }
 
   static async findAllExceptUserId(userId: number) {
-    return await prisma.profile.findMany({
+    const profiles = await prisma.profile.findMany({
       where: {
         userId: {
           not: userId,
@@ -77,6 +77,9 @@ export class ProfileModel {
       },
       orderBy: { createdAt: 'desc' },
     });
+    console.log('🔍 Database profiles found:', profiles.length);
+    console.log('📸 Database profile photo URLs:', profiles.slice(0, 3).map(p => ({ name: p.name, profilePhotoUrl: p.profilePhotoUrl })));
+    return profiles;
   }
 
   static async update(userId: number, updateData: UpdateProfileData) {

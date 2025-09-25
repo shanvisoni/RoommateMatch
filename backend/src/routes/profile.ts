@@ -1,10 +1,83 @@
 import express from 'express';
 import { body } from 'express-validator';
+import multer from 'multer';
+import sharp from 'sharp';
+import path from 'path';
+import fs from 'fs';
 import { ProfileModel } from '../models/Profile';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { handleValidationErrors } from '../middleware/validation';
 
 const router = express.Router();
+
+// Configure multer for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '../../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Upload profile photo
+router.post('/upload-photo', authenticateToken, upload.single('photo'), async (req: AuthenticatedRequest, res: any) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No file uploaded'
+      });
+    }
+
+    const userId = req.user!.id;
+    const fileExtension = path.extname(req.file.originalname);
+    const fileName = `profile_${userId}_${Date.now()}${fileExtension}`;
+    const filePath = path.join(uploadsDir, fileName);
+
+    // Process image with sharp (resize and optimize)
+    const processedBuffer = await sharp(req.file.buffer)
+      .resize(400, 400, { fit: 'cover' })
+      .jpeg({ quality: 80 })
+      .toBuffer();
+
+    // Save the processed image
+    await fs.promises.writeFile(filePath, processedBuffer);
+
+    // Convert to base64 for storage (works perfectly for deployment)
+    const base64Image = `data:image/jpeg;base64,${processedBuffer.toString('base64')}`;
+    
+    // Return both URL and base64 for flexibility
+    const photoUrl = `/uploads/${fileName}`;
+
+    res.json({
+      success: true,
+      message: 'Photo uploaded successfully',
+      data: { 
+        photoUrl,
+        base64Image // Include base64 as fallback
+      }
+    });
+  } catch (error) {
+    console.error('Photo upload error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to upload photo'
+    });
+  }
+});
 
 // Create profile
 router.post('/', [
@@ -17,12 +90,13 @@ router.post('/', [
 ], async (req: AuthenticatedRequest, res: any) => {
   try {
     console.log('📝 Creating profile with data:', req.body);
+    console.log('📸 Profile photo URL received:', req.body.profilePhotoUrl);
     const { 
       name, 
       age, 
       bio, 
       location, 
-      profile_photo_url,
+      profilePhotoUrl,
       gender,
       profession,
       budget,
@@ -50,7 +124,7 @@ router.post('/', [
       age,
       bio,
       location,
-      profilePhotoUrl: profile_photo_url,
+      profilePhotoUrl: profilePhotoUrl,
       gender,
       profession,
       budget,
@@ -121,7 +195,7 @@ router.put('/', [
       age, 
       bio, 
       location, 
-      profile_photo_url,
+      profilePhotoUrl,
       gender,
       profession,
       budget,
@@ -138,7 +212,7 @@ router.put('/', [
     if (age) updateData.age = age;
     if (bio) updateData.bio = bio;
     if (location) updateData.location = location;
-    if (profile_photo_url) updateData.profilePhotoUrl = profile_photo_url;
+    if (profilePhotoUrl) updateData.profilePhotoUrl = profilePhotoUrl;
     if (gender !== undefined) updateData.gender = gender;
     if (profession !== undefined) updateData.profession = profession;
     if (budget !== undefined) updateData.budget = budget;
@@ -169,6 +243,8 @@ router.put('/', [
 router.get('/all', authenticateToken, async (req: AuthenticatedRequest, res: any) => {
   try {
     const profiles = await ProfileModel.findAllExceptUserId(req.user!.id);
+    console.log('🔍 All profiles found:', profiles.length);
+    console.log('📸 First profile photo URLs:', profiles.slice(0, 3).map(p => ({ name: p.name, profilePhotoUrl: p.profilePhotoUrl })));
 
     res.json({
       success: true,
