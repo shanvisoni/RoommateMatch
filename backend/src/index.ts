@@ -74,6 +74,16 @@ app.use('/api/saved-profiles', savedProfilesRoutes);
 app.use('/api/connections', connectionsRoutes);
 app.use('/api/feedback', feedbackRoutes);
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({
+    message: 'RoomieMatch Backend API',
+    status: 'Running',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ 
