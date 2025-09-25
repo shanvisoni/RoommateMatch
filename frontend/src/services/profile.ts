@@ -24,7 +24,7 @@ export interface Profile {
   age: number;
   bio: string;
   location: string;
-  profile_photo_url?: string;
+  profilePhotoUrl?: string;
   gender?: string;
   profession?: string;
   budget?: number;
@@ -32,8 +32,11 @@ export interface Profile {
   smoking?: boolean;
   drinking?: string;
   pets?: boolean;
+  cleanliness?: string;
   socialLevel?: string;
   cooking?: string;
+  guests?: string;
+  music?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,11 +47,11 @@ export const profileService = {
     age: number;
     bio: string;
     location: string;
-    profile_photo_url?: string;
+    profilePhotoUrl?: string;
     gender?: string;
     profession?: string;
     budget?: number;
-    moveInDate?: Date;
+    moveInDate?: string;
     smoking?: boolean;
     drinking?: string;
     pets?: boolean;
@@ -100,7 +103,25 @@ export const profileService = {
     }
   },
 
-  async updateProfile(profileData: Partial<Profile>) {
+  async updateProfile(profileData: {
+    name?: string;
+    age?: number;
+    bio?: string;
+    location?: string;
+    profilePhotoUrl?: string;
+    gender?: string;
+    profession?: string;
+    budget?: number;
+    moveInDate?: string;
+    smoking?: boolean;
+    drinking?: string;
+    pets?: boolean;
+    cleanliness?: string;
+    socialLevel?: string;
+    cooking?: string;
+    guests?: string;
+    music?: string;
+  }) {
     try {
       const response = await api.put('/profile', profileData);
       
@@ -135,15 +156,34 @@ export const profileService = {
 
   async uploadProfilePhoto(file: File) {
     try {
-      // For now, we'll just return a placeholder URL
-      // In a real app, you'd upload to a file storage service
-      const placeholderUrl = `https://via.placeholder.com/400x400/cccccc/666666?text=${file.name}`;
-      
-      toast.success('Photo uploaded successfully!');
-      return { data: placeholderUrl, error: null };
+      const formData = new FormData();
+      formData.append('photo', file);
+
+      const response = await api.post('/profile/upload-photo', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data.success) {
+        // Use base64 image if available (works perfectly for deployment)
+        const base64Image = response.data.data.base64Image;
+        const photoUrl = response.data.data.photoUrl;
+        
+        // Prefer base64 for reliability, fallback to URL
+        const finalImageUrl = base64Image || `${API_URL}${photoUrl}`;
+        
+        console.log('📸 Uploaded photo - Base64 available:', !!base64Image);
+        console.log('📸 Final image URL:', finalImageUrl);
+        toast.success('Photo uploaded successfully!');
+        return { data: finalImageUrl, error: null };
+      } else {
+        throw new Error(response.data.error);
+      }
     } catch (error: any) {
-      toast.error('Photo upload failed: ' + error.message);
-      return { data: null, error };
+      const message = error.response?.data?.error || error.message;
+      toast.error('Photo upload failed: ' + message);
+      return { data: null, error: { message } };
     }
   }
 };

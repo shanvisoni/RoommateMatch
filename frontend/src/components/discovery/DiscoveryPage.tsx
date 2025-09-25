@@ -122,6 +122,8 @@ const DiscoveryPage: React.FC = () => {
       setLoading(true);
       const response = await profileService.getAllProfiles();
       const profilesData = response.data || [];
+      console.log('🔍 Discovery profiles received:', profilesData.length);
+      console.log('📸 First few profile photo URLs:', profilesData.slice(0, 3).map(p => ({ name: p.name, profilePhotoUrl: p.profilePhotoUrl })));
       setAllProfiles(profilesData);
       setProfiles(profilesData);
 
@@ -395,7 +397,7 @@ const DiscoveryPage: React.FC = () => {
             <div key={profile.id} className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100">
               {/* Profile Image */}
               <div className="relative h-64 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500">
-                {profile.profilePhotoUrl ? (
+                {profile.profilePhotoUrl && !profile.profilePhotoUrl.startsWith('blob:') ? (
                   <img
                     src={profile.profilePhotoUrl}
                     alt={profile.name}
@@ -492,7 +494,7 @@ const DiscoveryPage: React.FC = () => {
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white rounded-t-2xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  {selectedProfile.profilePhotoUrl ? (
+                  {selectedProfile.profilePhotoUrl && !selectedProfile.profilePhotoUrl.startsWith('blob:') ? (
                     <img
                       src={selectedProfile.profilePhotoUrl}
                       alt={selectedProfile.name}

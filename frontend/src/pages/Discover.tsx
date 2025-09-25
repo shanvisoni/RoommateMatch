@@ -93,9 +93,9 @@ const Discover: React.FC = () => {
         <div className="card">
           <div className="text-center">
             {/* Profile Photo */}
-            {currentUser.profile_photo_url ? (
+            {currentUser.profilePhotoUrl ? (
               <img
-                src={currentUser.profile_photo_url}
+                src={currentUser.profilePhotoUrl}
                 alt={currentUser.name}
                 className="w-48 h-48 rounded-full object-cover mx-auto mb-6"
               />

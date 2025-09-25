@@ -55,11 +55,32 @@ const CreateProfileForm: React.FC = () => {
     }));
   };
 
-
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setFormData(prev => ({ ...prev, profilePhoto: file, profilePhotoUrl: URL.createObjectURL(file) }));
+      // Create a preview URL for the selected file
+      const previewUrl = URL.createObjectURL(file);
+      setFormData(prev => ({ 
+        ...prev, 
+        profilePhoto: file, 
+        profilePhotoUrl: previewUrl 
+      }));
+
+      // Upload the file to the server
+      try {
+        const { data: uploadedUrl, error } = await profileService.uploadProfilePhoto(file);
+        if (uploadedUrl && !error) {
+          setFormData(prev => ({ 
+            ...prev, 
+            profilePhotoUrl: uploadedUrl 
+          }));
+          // Clean up the blob URL
+          URL.revokeObjectURL(previewUrl);
+        }
+      } catch (error) {
+        console.error('Error uploading photo:', error);
+        toast.error('Failed to upload photo');
+      }
     }
   };
 
@@ -82,10 +103,11 @@ const CreateProfileForm: React.FC = () => {
         pets: formData.pets === 'yes',
         socialLevel: formData.socialness || 'moderate',
         cooking: formData.cooking,
-        profile_photo_url: formData.profilePhotoUrl
+        profilePhotoUrl: formData.profilePhotoUrl
       };
 
       console.log('📝 Profile data to send:', profileData);
+      console.log('📸 Profile photo URL being sent:', profileData.profilePhotoUrl);
       
       // Validate required fields before sending
       if (!profileData.name || !profileData.bio || !profileData.location || !profileData.age) {
@@ -164,7 +186,7 @@ const CreateProfileForm: React.FC = () => {
       {/* Profile Photo */}
       <div className="text-center">
         <div className="relative inline-block">
-          {formData.profilePhotoUrl ? (
+          {formData.profilePhotoUrl && !formData.profilePhotoUrl.startsWith('blob:') ? (
             <img
               src={formData.profilePhotoUrl}
               alt="Profile"
@@ -185,7 +207,23 @@ const CreateProfileForm: React.FC = () => {
             />
           </label>
         </div>
-        <p className="text-sm text-gray-500 mt-2">A clear photo works best for matching</p>
+        <p className="text-sm text-gray-500 mt-2">Click the camera icon to upload from computer, or paste an image URL below</p>
+        
+        {/* Image URL Input */}
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Or paste image URL</label>
+          <input
+            type="url"
+            name="profilePhotoUrl"
+            value={formData.profilePhotoUrl}
+            onChange={handleInputChange}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="https://example.com/your-photo.jpg"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Upload to <a href="https://imgur.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Imgur</a> or <a href="https://photos.google.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google Photos</a> and paste the link here
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

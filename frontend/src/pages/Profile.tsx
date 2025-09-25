@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { profileService, Profile as ProfileType } from '../services/profile';
+import { profileService, type Profile as ProfileType } from '../services/profile';
 import { 
   User, 
   MapPin, 
@@ -15,22 +15,10 @@ import {
   Star, 
   Heart, 
   Users, 
-  MessageCircle,
   Save,
   X,
-  Clock,
   Coffee,
-  Gamepad2,
-  BookOpen,
-  Dumbbell,
-  Car,
-  Plane,
-  CheckCircle,
-  Phone,
-  Mail,
-  Globe,
-  UserCheck,
-  Settings
+  UserCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -43,7 +31,8 @@ const Profile: React.FC = () => {
     age: '',
     bio: '',
     location: '',
-    profile_photo_url: '',
+    profilePhotoUrl: '',
+    profilePhoto: null as File | null,
     gender: '',
     profession: '',
     budget: '',
@@ -73,13 +62,16 @@ const Profile: React.FC = () => {
       }
       
       if (data) {
+        console.log('📸 Profile data received:', data);
+        console.log('📸 Profile photo URL:', data.profilePhotoUrl);
         setProfile(data);
-        setFormData({
+        const formDataToSet = {
           name: data.name,
           age: data.age.toString(),
           bio: data.bio,
           location: data.location,
-          profile_photo_url: data.profile_photo_url || '',
+          profilePhotoUrl: data.profilePhotoUrl || '',
+          profilePhoto: null,
           gender: data.gender || '',
           profession: data.profession || '',
           budget: data.budget ? data.budget.toString() : '',
@@ -89,7 +81,10 @@ const Profile: React.FC = () => {
           socialLevel: data.socialLevel || '',
           drinking: data.drinking || '',
           cooking: data.cooking || ''
-        });
+        };
+        console.log('📝 Form data being set:', formDataToSet);
+        console.log('📝 Profile photo URL in form data:', formDataToSet.profilePhotoUrl);
+        setFormData(formDataToSet);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -107,11 +102,11 @@ const Profile: React.FC = () => {
         age: parseInt(formData.age),
         bio: formData.bio,
         location: formData.location,
-        profile_photo_url: formData.profile_photo_url,
+        profilePhotoUrl: formData.profilePhotoUrl,
         gender: formData.gender || undefined,
         profession: formData.profession || undefined,
         budget: formData.budget ? parseInt(formData.budget) : undefined,
-        moveInDate: formData.moveInDate ? new Date(formData.moveInDate) : undefined,
+        moveInDate: formData.moveInDate || undefined,
         smoking: formData.smoking === 'yes',
         pets: formData.pets === 'yes',
         socialLevel: formData.socialLevel || undefined,
@@ -150,16 +145,30 @@ const Profile: React.FC = () => {
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (file) {
+      // Create a preview URL for the selected file
+      const previewUrl = URL.createObjectURL(file);
+      setFormData(prev => ({ 
+        ...prev, 
+        profilePhoto: file,
+        profilePhotoUrl: previewUrl 
+      }));
 
-    try {
-      // For now, just use a placeholder URL
-      const placeholderUrl = URL.createObjectURL(file);
-      setFormData({ ...formData, profile_photo_url: placeholderUrl });
-      toast.success('Profile photo updated!');
-    } catch (error) {
-      console.error('Photo upload failed:', error);
-      toast.error('Failed to upload photo');
+      // Upload the file to the server
+      try {
+        const { data: uploadedUrl, error } = await profileService.uploadProfilePhoto(file);
+        if (uploadedUrl && !error) {
+          setFormData(prev => ({ 
+            ...prev, 
+            profilePhotoUrl: uploadedUrl 
+          }));
+          // Clean up the blob URL
+          URL.revokeObjectURL(previewUrl);
+        }
+      } catch (error) {
+        console.error('Error uploading photo:', error);
+        toast.error('Failed to upload photo');
+      }
     }
   };
 
@@ -226,9 +235,9 @@ const Profile: React.FC = () => {
               {/* Profile Photo Section */}
               <div className="text-center mb-8">
                 <div className="relative inline-block">
-                  {formData.profile_photo_url ? (
+                  {formData.profilePhotoUrl && !formData.profilePhotoUrl.startsWith('blob:') ? (
                     <img
-                      src={formData.profile_photo_url}
+                      src={formData.profilePhotoUrl}
                       alt="Profile"
                       className="w-32 h-32 rounded-full object-cover mx-auto border-4 border-blue-100 shadow-lg"
                     />
@@ -247,7 +256,22 @@ const Profile: React.FC = () => {
                     />
                   </label>
                 </div>
-                <p className="text-sm text-gray-500 mt-2">Click the camera icon to upload a photo</p>
+                <p className="text-sm text-gray-500 mt-2">Click the camera icon to upload from computer, or paste an image URL below</p>
+                
+                {/* Image URL Input */}
+                <div className="mt-4 max-w-md mx-auto">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Or paste image URL</label>
+                  <input
+                    type="url"
+                    value={formData.profilePhotoUrl}
+                    onChange={(e) => setFormData({ ...formData, profilePhotoUrl: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="https://example.com/your-photo.jpg"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Upload to <a href="https://imgur.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Imgur</a> or <a href="https://photos.google.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google Photos</a> and paste the link here
+                  </p>
+                </div>
               </div>
 
               {/* Basic Information */}
@@ -444,9 +468,9 @@ const Profile: React.FC = () => {
             <div className="lg:col-span-1">
               <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
                 <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-8 text-center text-white">
-                  {profile?.profile_photo_url ? (
+                  {profile?.profilePhotoUrl && !profile.profilePhotoUrl.startsWith('blob:') ? (
                     <img
-                      src={profile.profile_photo_url}
+                      src={profile.profilePhotoUrl}
                       alt="Profile"
                       className="w-32 h-32 rounded-full object-cover mx-auto mb-4 border-4 border-white shadow-lg"
                     />
