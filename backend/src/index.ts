@@ -26,13 +26,19 @@ dotenv.config();
 
 const app = express();
 const server = createServer(app);
+
+// Define allowed origins
+const allowedOrigins = [
+  process.env.CORS_ORIGIN || "http://localhost:3000",
+  "https://roommate-match.vercel.app",
+  "https://roommate-match-fsmmvo1na-shanvis-projects-43b92a07.vercel.app",
+  "https://roommate-match-git-main-shanvis-projects-43b92a07.vercel.app",
+  "https://roommate-match-kyeigx92q-shanvis-projects-43b92a07.vercel.app"
+];
+
 const io = new Server(server, {
   cors: {
-    origin: [
-      process.env.CORS_ORIGIN || "http://localhost:3000",
-      "https://roommate-match.vercel.app",
-      "https://roommate-match-fsmmvo1na-shanvis-projects-43b92a07.vercel.app"
-    ],
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true
   }
@@ -43,11 +49,7 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 app.use(cors({
-  origin: [
-    process.env.CORS_ORIGIN || "http://localhost:3000",
-    "https://roommate-match.vercel.app",
-    "https://roommate-match-fsmmvo1na-shanvis-projects-43b92a07.vercel.app"
-  ],
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -97,7 +99,18 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    cors_origin: process.env.CORS_ORIGIN || 'http://localhost:3000'
+  });
+});
+
+// CORS test endpoint
+app.get('/api/cors-test', (req, res) => {
+  res.json({
+    message: 'CORS is working!',
+    origin: req.headers.origin,
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -122,6 +135,7 @@ app.get('/uploads/:filename', (req, res) => {
 // Socket.io connection handling
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
+  console.log('Connection origin:', socket.handshake.headers.origin);
 
   socket.on('join_room', (roomId) => {
     socket.join(roomId);
@@ -129,11 +143,16 @@ io.on('connection', (socket) => {
   });
 
   socket.on('send_message', (data) => {
+    console.log('Message received via socket:', data);
     socket.to(data.roomId).emit('receive_message', data);
   });
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
+  });
+
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
   });
 });
 
