@@ -2,7 +2,7 @@ import axios from 'axios';
 import { tokenStorage } from '../utils/supabase';
 import toast from 'react-hot-toast';
 
-const API_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.REACT_APP_API_URL || 'https://roommatematch-skb3.onrender.com';
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,

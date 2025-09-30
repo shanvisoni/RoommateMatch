@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import { tokenStorage } from '../utils/supabase';
 
-const API_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.REACT_APP_API_URL || 'https://roommatematch-skb3.onrender.com';
 
 class SocketService {
   private socket: Socket | null = null;
