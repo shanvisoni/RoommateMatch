@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { profileService, Profile } from '../services/profile';
+import { Link, useNavigate } from 'react-router-dom';
+import { profileService } from '../services/profile';
+import type { Profile } from '../services/profile';
 import { matchingService } from '../services/matching';
 import { savedProfilesService } from '../services/savedProfiles';
-import { connectionsService, Connection } from '../services/connections';
-import { Users, MessageCircle, User, Heart, Bookmark, UserPlus, TrendingUp, CheckCircle, XCircle, Clock, Eye, Search, Filter, MoreVertical, RefreshCw, MessageSquare, ArrowUpRight, Trash2 } from 'lucide-react';
+import { connectionsService } from '../services/connections';
+import type { Connection } from '../services/connections';
+import { User, CheckCircle, XCircle, Clock, Search, Filter, MoreVertical, RefreshCw, MessageSquare, ArrowUpRight, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -74,8 +77,8 @@ const Dashboard: React.FC = () => {
       setSentConnections(sentConnectionsData || []);
       setReceivedConnections(receivedConnectionsData || []);
 
-      const pendingConnections = receivedConnectionsData?.filter(c => c.status === 'pending').length || 0;
-      const acceptedConnections = sentConnectionsData?.filter(c => c.status === 'accepted').length || 0;
+      const pendingConnections = receivedConnectionsData?.filter((c: Connection) => c.status === 'pending').length || 0;
+      const acceptedConnections = sentConnectionsData?.filter((c: Connection) => c.status === 'accepted').length || 0;
 
       console.log('📊 Stats:', {
         pending: pendingConnections,
@@ -103,7 +106,7 @@ const Dashboard: React.FC = () => {
   const handleAcceptConnection = async (connectionId: number) => {
     try {
       setConnectionLoading(true);
-      const { data, error } = await connectionsService.acceptConnection(connectionId);
+      const { error } = await connectionsService.acceptConnection(connectionId);
       
       if (error) {
         throw error;
@@ -141,7 +144,7 @@ const Dashboard: React.FC = () => {
   const handleRejectConnection = async (connectionId: number) => {
     try {
       setConnectionLoading(true);
-      const { data, error } = await connectionsService.rejectConnection(connectionId);
+      const { error } = await connectionsService.rejectConnection(connectionId);
       
       if (error) {
         throw error;
@@ -176,10 +179,16 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleMessageUser = (userId: number) => {
+    console.log('Navigating to messages with userId:', userId);
+    // Navigate to messages page with the user ID as a parameter
+    navigate(`/messages?userId=${userId}`);
+  };
+
   const handleWithdrawConnection = async (connectionId: number) => {
     try {
       setConnectionLoading(true);
-      const { data, error } = await connectionsService.rejectConnection(connectionId);
+      const { error } = await connectionsService.rejectConnection(connectionId);
       
       if (error) {
         throw error;
@@ -499,8 +508,8 @@ const Dashboard: React.FC = () => {
                           ) : activeTab === 'received' && connection.status === 'accepted' ? (
                             <div className="flex space-x-2">
                               <button
-                                disabled
-                                className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-600 rounded-md cursor-not-allowed text-sm"
+                                onClick={() => handleMessageUser(connection.requesterId)}
+                                className="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
                               >
                                 <MessageSquare className="h-4 w-4 mr-1" />
                                 Message
@@ -509,8 +518,8 @@ const Dashboard: React.FC = () => {
                           ) : activeTab === 'sent' && connection.status === 'accepted' ? (
                             <div className="flex space-x-2">
                               <button
-                                disabled
-                                className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-600 rounded-md cursor-not-allowed text-sm"
+                                onClick={() => handleMessageUser(connection.receiverId)}
+                                className="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
                               >
                                 <MessageSquare className="h-4 w-4 mr-1" />
                                 Message

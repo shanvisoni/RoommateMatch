@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { profileService, Profile } from '../services/profile';
+import { profileService } from '../services/profile';
+import type { Profile } from '../services/profile';
 import { matchingService } from '../services/matching';
 import { User, MapPin, Heart, X } from 'lucide-react';
 

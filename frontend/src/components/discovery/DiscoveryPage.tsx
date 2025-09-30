@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { profileService } from '../../services/profile';
-import { matchingService } from '../../services/matching';
 import { savedProfilesService } from '../../services/savedProfiles';
 import { connectionsService } from '../../services/connections';
 import toast from 'react-hot-toast';
@@ -9,30 +9,16 @@ import {
   Calendar, 
   Briefcase, 
   DollarSign, 
-  Filter,
   User,
   Home,
-  Music,
   ChefHat,
   Bookmark,
   BookmarkCheck,
   UserPlus,
   MessageCircle,
-  Star,
   Eye,
-  Phone,
-  Mail,
   X,
-  CheckCircle,
-  UserCheck,
-  Globe,
-  Clock,
   Coffee,
-  Gamepad2,
-  BookOpen,
-  Dumbbell,
-  Car,
-  Plane,
   Heart,
   Users
 } from 'lucide-react';
@@ -61,6 +47,7 @@ interface Profile {
 }
 
 const DiscoveryPage: React.FC = () => {
+  const navigate = useNavigate();
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,11 +69,7 @@ const DiscoveryPage: React.FC = () => {
     smoking: '',
     drinking: '',
     pets: '',
-    cleanliness: '',
     socialLevel: '',
-    workFromHome: '',
-    guests: '',
-    music: '',
     cooking: ''
   });
 
@@ -123,12 +106,12 @@ const DiscoveryPage: React.FC = () => {
       const response = await profileService.getAllProfiles();
       const profilesData = response.data || [];
       console.log('🔍 Discovery profiles received:', profilesData.length);
-      console.log('📸 First few profile photo URLs:', profilesData.slice(0, 3).map(p => ({ name: p.name, profilePhotoUrl: p.profilePhotoUrl })));
+      console.log('📸 First few profile photo URLs:', profilesData.slice(0, 3).map((p: Profile) => ({ name: p.name, profilePhotoUrl: p.profilePhotoUrl })));
       setAllProfiles(profilesData);
       setProfiles(profilesData);
 
       // Check saved and connection statuses for each profile
-      profilesData.forEach(profile => {
+      profilesData.forEach((profile: Profile) => {
         checkSavedStatus(profile.id);
         checkConnectionStatus(profile.userId);
       });
@@ -140,7 +123,7 @@ const DiscoveryPage: React.FC = () => {
   };
 
   const handleViewProfile = (profileId: number) => {
-    const profile = profiles.find(p => p.id === profileId);
+    const profile = profiles.find((p: Profile) => p.id === profileId);
     if (profile) {
       setSelectedProfile(profile);
       setShowProfileModal(true);
@@ -175,6 +158,11 @@ const DiscoveryPage: React.FC = () => {
     }
   };
 
+  const handleMessageUser = (userId: number) => {
+    // Navigate to messages page with the user ID as a parameter
+    navigate(`/messages?userId=${userId}`);
+  };
+
   const checkSavedStatus = async (profileId: number) => {
     try {
       const { data } = await savedProfilesService.checkIfSaved(profileId);
@@ -197,105 +185,7 @@ const DiscoveryPage: React.FC = () => {
     }
   };
 
-  const applyFilters = () => {
-    let filtered = profiles;
 
-    if (filters.location) {
-      filtered = filtered.filter(p =>
-        p.location.toLowerCase().includes(filters.location.toLowerCase())
-      );
-    }
-
-    if (filters.gender) {
-      filtered = filtered.filter(p => p.gender === filters.gender);
-    }
-
-    if (filters.ageMin) {
-      filtered = filtered.filter(p => p.age >= parseInt(filters.ageMin));
-    }
-
-    if (filters.ageMax) {
-      filtered = filtered.filter(p => p.age <= parseInt(filters.ageMax));
-    }
-
-    if (filters.budgetMin) {
-      filtered = filtered.filter(p => p.budget && p.budget >= parseInt(filters.budgetMin));
-    }
-
-    if (filters.budgetMax) {
-      filtered = filtered.filter(p => p.budget && p.budget <= parseInt(filters.budgetMax));
-    }
-
-    if (filters.profession) {
-      filtered = filtered.filter(p =>
-        p.profession?.toLowerCase().includes(filters.profession.toLowerCase())
-      );
-    }
-
-    if (filters.smoking) {
-      filtered = filtered.filter(p => p.smoking === (filters.smoking === 'true'));
-    }
-
-    if (filters.drinking) {
-      filtered = filtered.filter(p => p.drinking === filters.drinking);
-    }
-
-    if (filters.pets) {
-      filtered = filtered.filter(p => p.pets === (filters.pets === 'true'));
-    }
-
-    if (filters.cleanliness) {
-      filtered = filtered.filter(p => p.cleanliness === filters.cleanliness);
-    }
-
-    if (filters.socialLevel) {
-      filtered = filtered.filter(p => p.socialLevel === filters.socialLevel);
-    }
-
-    if (filters.workFromHome) {
-      filtered = filtered.filter(p => p.workFromHome === (filters.workFromHome === 'true'));
-    }
-
-    if (filters.guests) {
-      filtered = filtered.filter(p => p.guests === filters.guests);
-    }
-
-    if (filters.music) {
-      filtered = filtered.filter(p => p.music === filters.music);
-    }
-
-    if (filters.cooking) {
-      filtered = filtered.filter(p => p.cooking === filters.cooking);
-    }
-
-    setProfiles(filtered);
-    setCurrentPage(0);
-    setShowFilters(false);
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      location: '',
-      gender: '',
-      ageMin: '',
-      ageMax: '',
-      budgetMin: '',
-      budgetMax: '',
-      profession: '',
-      smoking: '',
-      drinking: '',
-      pets: '',
-      cleanliness: '',
-      socialLevel: '',
-      workFromHome: '',
-      guests: '',
-      music: '',
-      cooking: ''
-    });
-    loadProfiles();
-    setCurrentPage(0);
-    setShowFilters(false);
-  };
 
   // Calculate pagination
   const totalPages = Math.ceil(profiles.length / profilesPerPage);
@@ -709,7 +599,10 @@ const DiscoveryPage: React.FC = () => {
                     );
                   } else if (connectionStatus === 'accepted') {
                     return (
-                      <button className="flex items-center px-6 py-3 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-all duration-200 shadow-lg hover:shadow-xl">
+                      <button 
+                        onClick={() => handleMessageUser(selectedProfile.userId)}
+                        className="flex items-center px-6 py-3 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-all duration-200 shadow-lg hover:shadow-xl"
+                      >
                         <MessageCircle className="h-5 w-5 mr-2" />
                         Start Chatting
                       </button>

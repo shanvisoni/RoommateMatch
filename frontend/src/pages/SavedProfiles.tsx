@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { savedProfilesService, SavedProfile } from '../services/savedProfiles';
+import { useNavigate } from 'react-router-dom';
+import { savedProfilesService } from '../services/savedProfiles';
+import type { SavedProfile } from '../services/savedProfiles';
 import { connectionsService } from '../services/connections';
 import { feedbackService } from '../services/feedback';
 import toast from 'react-hot-toast';
@@ -19,6 +21,7 @@ import {
 } from 'lucide-react';
 
 const SavedProfiles: React.FC = () => {
+  const navigate = useNavigate();
   const [savedProfiles, setSavedProfiles] = useState<SavedProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [connectionStatuses, setConnectionStatuses] = useState<Map<number, string>>(new Map());
@@ -45,8 +48,8 @@ const SavedProfiles: React.FC = () => {
       
       // Check connection statuses
       if (data) {
-        data.forEach(profile => {
-          checkConnectionStatus(profile.profile?.userId || 0);
+        data.forEach((profile: SavedProfile) => {
+          checkConnectionStatus(profile.userId);
         });
       }
     } catch (error: any) {
@@ -77,6 +80,11 @@ const SavedProfiles: React.FC = () => {
     }
   };
 
+  const handleMessageUser = (userId: number) => {
+    // Navigate to messages page with the user ID as a parameter
+    navigate(`/messages?userId=${userId}`);
+  };
+
   const handleUnsave = async (profileId: number) => {
     try {
       await savedProfilesService.unsaveProfile(profileId);
@@ -101,11 +109,11 @@ const SavedProfiles: React.FC = () => {
   };
 
   const submitFeedback = async () => {
-    if (!selectedProfile?.profile?.userId) return;
+    if (!selectedProfile?.userId) return;
     
     try {
       await feedbackService.createFeedback({
-        toUserId: selectedProfile.profile.userId,
+        toUserId: selectedProfile.userId,
         rating: feedback.rating,
         comment: feedback.comment,
         cleanliness: feedback.cleanliness,
@@ -431,7 +439,7 @@ const SavedProfiles: React.FC = () => {
                       <h3 className="text-xl font-bold text-gray-900 mb-4">Actions</h3>
                       <div className="space-y-4">
                         {(() => {
-                          const connectionStatus = connectionStatuses.get(selectedProfile.profile?.userId || 0);
+                          const connectionStatus = connectionStatuses.get(selectedProfile.userId);
                           if (connectionStatus === 'pending') {
                             return (
                               <button
@@ -445,7 +453,10 @@ const SavedProfiles: React.FC = () => {
                           } else if (connectionStatus === 'accepted') {
                             return (
                               <div className="space-y-3">
-                                <button className="w-full flex items-center justify-center px-6 py-3 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-all duration-200 shadow-lg hover:shadow-xl">
+                                <button 
+                                  onClick={() => handleMessageUser(selectedProfile.userId)}
+                                  className="w-full flex items-center justify-center px-6 py-3 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-all duration-200 shadow-lg hover:shadow-xl"
+                                >
                                   <MessageCircle className="h-5 w-5 mr-2" />
                                   Start Chatting
                                 </button>
@@ -461,7 +472,7 @@ const SavedProfiles: React.FC = () => {
                           } else {
                             return (
                               <button
-                                onClick={() => handleConnect(selectedProfile.profile?.userId || 0)}
+                                onClick={() => handleConnect(selectedProfile.userId)}
                                 className="w-full flex items-center justify-center px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl font-medium hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-lg hover:shadow-xl"
                               >
                                 <UserPlus className="h-5 w-5 mr-2" />
