@@ -167,7 +167,7 @@ const Messages: React.FC = () => {
   const testBackendConnection = async () => {
     try {
       console.log('🔌 Testing backend connection...');
-      const response = await fetch(`${import.meta.env.REACT_APP_API_URL || 'https://roommatematch-skb3.onrender.com'}/api/auth/me`, {
+      const response = await fetch(`${import.meta.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/me`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
