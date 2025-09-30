@@ -4,6 +4,10 @@ import toast from 'react-hot-toast';
 
 const API_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:5000';
 
+// Debug: Log the API URL being used
+console.log('🔍 API_URL being used:', API_URL);
+console.log('🔍 Environment:', import.meta.env.MODE);
+
 const api = axios.create({
   baseURL: `${API_URL}/api`,
 });
@@ -46,7 +50,12 @@ export const authService = {
 
   async login(email: string, password: string) {
     try {
+      console.log('🔐 Attempting login to:', `${API_URL}/api/auth/login`);
+      console.log('🔐 Request data:', { email, password: '***' });
+      
       const response = await api.post('/auth/login', { email, password });
+      
+      console.log('🔐 Login response:', response.data);
       
       if (response.data.success) {
         const { user, token } = response.data.data;
@@ -58,6 +67,14 @@ export const authService = {
         throw new Error(response.data.error);
       }
     } catch (error: any) {
+      console.error('❌ Login error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL
+      });
+      
       const message = error.response?.data?.error || error.message;
       toast.error('Login failed: ' + message);
       return { data: null, error: { message } };
