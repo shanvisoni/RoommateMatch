@@ -2,7 +2,10 @@ import axios from 'axios';
 import { tokenStorage } from '../utils/supabase';
 import toast from 'react-hot-toast';
 
-const API_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:5000';
+// Temporarily hardcode for production debugging
+const API_URL = import.meta.env.MODE === 'production' 
+  ? 'https://roommatematch-skb3.onrender.com'
+  : (import.meta.env.REACT_APP_API_URL || 'http://localhost:5000');
 
 // Debug: Log the API URL being used
 console.log('🔍 API_URL being used:', API_URL);
