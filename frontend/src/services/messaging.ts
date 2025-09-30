@@ -19,11 +19,12 @@ api.interceptors.request.use((config) => {
 });
 
 export interface Message {
-  id: number;
+  id: number | string;
   senderId: number;
   receiverId: number;
   content: string;
   createdAt: string;
+  isTemporary?: boolean;
 }
 
 export interface ChatRoom {
@@ -100,6 +101,9 @@ export const messagingService = {
       // Connect to socket if not already connected
       const socket = socketService.connect();
       
+      // Wait a bit for connection to establish
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Join the room for this conversation
       const roomId = `chat_${userId}`;
       socketService.joinRoom(roomId);
@@ -117,7 +121,7 @@ export const messagingService = {
         socketService.leaveRoom(roomId);
       };
     } catch (error) {
-      console.error('Failed to subscribe to messages:', error);
+      console.error('❌ Failed to subscribe to messages:', error);
       return null;
     }
   },

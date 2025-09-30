@@ -86,9 +86,19 @@ const Messages: React.FC = () => {
         setMessages(prev => {
           // Check if message already exists to avoid duplicates
           const exists = prev.some(msg => msg.id === newMessage.id);
-          if (exists) return prev;
+          if (exists) {
+            console.log('📨 Message already exists, skipping duplicate');
+            return prev;
+          }
           
-          return [...prev, newMessage];
+          // Remove any temporary messages with the same content from the same sender
+          const filteredPrev = prev.filter(msg => 
+            !(msg.isTemporary && 
+              msg.senderId === newMessage.senderId && 
+              msg.content === newMessage.content)
+          );
+          
+          return [...filteredPrev, newMessage];
         });
       });
       return unsubscribe;
@@ -207,6 +217,8 @@ const Messages: React.FC = () => {
   useEffect(() => {
     if (selectedChat) {
       console.log('📨 Loading messages for chat:', selectedChat.id);
+      // Clean up any temporary messages when switching chats
+      setMessages(prev => prev.filter(msg => !msg.isTemporary && !msg.id.toString().startsWith('temp_')));
       loadMessages(selectedChat.user2Id);
       checkConnectionStatus(selectedChat.user2Id);
     }
@@ -296,13 +308,17 @@ const Messages: React.FC = () => {
       console.log('📤 To user ID:', selectedChat.user2Id);
       console.log('📤 Current user ID:', currentUserId);
 
+      // Create a unique temporary ID for this message
+      const tempId = `temp_${Date.now()}_${Math.random()}`;
+      
       // Optimistically add the message to the UI immediately
       const tempMessage = {
-        id: Date.now(), // Temporary ID
+        id: tempId, // Unique temporary ID
         senderId: currentUserId!,
         receiverId: selectedChat.user2Id,
         content: messageContent,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        isTemporary: true // Mark as temporary
       };
       
       setMessages(prev => [...prev, tempMessage]);
@@ -315,17 +331,23 @@ const Messages: React.FC = () => {
       console.log('📤 Send response:', { data, error });
 
       if (!error && data?.success) {
-        // WebSocket will handle real-time updates, no need to reload
-        console.log('✅ Message sent successfully');
+        // Remove the temporary message since WebSocket will add the real one
+        setMessages(prev => prev.filter(msg => msg.id.toString() !== tempId));
+        console.log('✅ Message sent successfully, temporary message removed');
+        
+        // Set a timeout to remove temporary message if WebSocket doesn't replace it
+        setTimeout(() => {
+          setMessages(prev => prev.filter(msg => msg.id.toString() !== tempId));
+        }, 5000); // 5 second timeout
       } else {
         // Remove the temporary message if sending failed
-        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+        setMessages(prev => prev.filter(msg => msg.id.toString() !== tempId));
         setNewMessage(messageContent); // Restore the message content
         console.error('❌ Send message error:', error);
       }
     } catch (error) {
       // Remove the temporary message if sending failed
-      setMessages(prev => prev.filter(msg => msg.id !== Date.now()));
+      setMessages(prev => prev.filter(msg => !msg.id.toString().startsWith('temp_')));
       setNewMessage(messageContent); // Restore the message content
       console.error('❌ Send message failed:', error);
     } finally {
@@ -546,7 +568,7 @@ const Messages: React.FC = () => {
                   ) : (
                     Array.isArray(messages) ? messages.map((message) => {
                       const isOwnMessage = message.senderId === currentUserId;
-                      const isTemporaryMessage = message.id > 1000000000000; // Temporary messages have timestamp IDs
+                      const isTemporaryMessage = message.isTemporary || message.id.toString().startsWith('temp_');
                       return (
                         <div
                           key={message.id}

@@ -13,27 +13,35 @@ class SocketService {
     }
 
     const token = tokenStorage.getToken();
+    console.log('🔌 Connecting to socket:', API_URL);
+    console.log('🔌 Token available:', !!token);
     
     this.socket = io(API_URL, {
       auth: {
         token: token
       },
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
+      forceNew: true
     });
 
     this.socket.on('connect', () => {
-      console.log('Socket connected:', this.socket?.id);
+      console.log('✅ Socket connected:', this.socket?.id);
       this.isConnected = true;
     });
 
-    this.socket.on('disconnect', () => {
-      console.log('Socket disconnected');
+    this.socket.on('disconnect', (reason) => {
+      console.log('❌ Socket disconnected:', reason);
       this.isConnected = false;
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+      console.error('❌ Socket connection error:', error);
       this.isConnected = false;
+    });
+
+    this.socket.on('error', (error) => {
+      console.error('❌ Socket error:', error);
     });
 
     return this.socket;

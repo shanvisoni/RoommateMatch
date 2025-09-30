@@ -82,19 +82,23 @@ export const authService = {
     try {
       const token = tokenStorage.getToken();
       if (!token) {
+        console.log('🔍 No token found in storage');
         return { user: null, error: null };
       }
 
+      console.log('🔍 Checking current user with token:', token.substring(0, 20) + '...');
       const response = await api.get('/auth/me');
       
       if (response.data.success) {
         const user = response.data.data.user;
         tokenStorage.setUser(user);
+        console.log('✅ Current user loaded:', user.id);
         return { user, error: null };
       } else {
         throw new Error(response.data.error);
       }
     } catch (error: any) {
+      console.error('❌ Get current user failed:', error);
       // If token is invalid, clear it
       tokenStorage.clear();
       return { user: null, error };
