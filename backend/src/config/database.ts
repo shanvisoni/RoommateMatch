@@ -40,6 +40,13 @@ async function connectWithRetry(maxRetries = 5, delay = 2000): Promise<boolean> 
   for (let i = 0; i < maxRetries; i++) {
     try {
       console.log(`🔄 Database connection attempt ${i + 1}/${maxRetries}`);
+      
+      // For production, add a small delay before connection
+      if (process.env.NODE_ENV === 'production' && i > 0) {
+        console.log('⏳ Production delay before retry...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
       await prisma.$connect();
       console.log('✅ Connected to PostgreSQL database via Prisma');
       
@@ -56,8 +63,18 @@ async function connectWithRetry(maxRetries = 5, delay = 2000): Promise<boolean> 
       console.error('Database URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
       console.error('Environment:', process.env.NODE_ENV);
       
+      // For P1001 errors (connection refused), try longer delays
+      if (err?.code === 'P1001') {
+        console.log('🔍 P1001 error detected - connection refused, trying longer delay...');
+        delay = Math.min(delay * 2, 10000); // Increase delay up to 10 seconds
+      }
+      
       if (i === maxRetries - 1) {
         console.error('❌ All database connection attempts failed');
+        console.error('💡 This might be a Supabase connection issue. Check:');
+        console.error('   1. Supabase database is running');
+        console.error('   2. Database URL is correct');
+        console.error('   3. Network connectivity from Render to Supabase');
         throw err;
       }
       
