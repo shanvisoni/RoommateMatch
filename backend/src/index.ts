@@ -105,6 +105,27 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Database health check
+app.get('/api/health/db', async (req, res) => {
+  try {
+    const prisma = require('./config/database').default;
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({
+      status: 'OK',
+      database: 'Connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    console.error('Database health check failed:', error);
+    res.status(500).json({
+      status: 'ERROR',
+      database: 'Disconnected',
+      error: error?.message || 'Unknown database error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // CORS test endpoint
 app.get('/api/cors-test', (req, res) => {
   res.json({

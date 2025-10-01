@@ -64,11 +64,21 @@ router.post('/login', [
   handleValidationErrors
 ], async (req: any, res: any) => {
   try {
+    console.log('🔐 Login attempt started');
+    console.log('🔐 Request body:', { email: req.body.email, password: '***' });
+    console.log('🔐 Environment:', process.env.NODE_ENV);
+    console.log('🔐 Database URL set:', !!process.env.DATABASE_URL);
+    console.log('🔐 JWT Secret set:', !!process.env.JWT_SECRET);
+
     const { email, password } = req.body;
 
     // Find user by email
+    console.log('🔍 Looking up user by email:', email);
     const user = await UserModel.findByEmail(email);
+    console.log('🔍 User found:', !!user);
+    
     if (!user) {
+      console.log('❌ User not found for email:', email);
       return res.status(401).json({
         success: false,
         error: 'Invalid email or password'
@@ -76,8 +86,12 @@ router.post('/login', [
     }
 
     // Verify password
+    console.log('🔐 Verifying password...');
     const isValidPassword = await UserModel.verifyPassword(password, user.passwordHash);
+    console.log('🔐 Password valid:', isValidPassword);
+    
     if (!isValidPassword) {
+      console.log('❌ Invalid password for user:', email);
       return res.status(401).json({
         success: false,
         error: 'Invalid email or password'
@@ -85,13 +99,16 @@ router.post('/login', [
     }
 
     // Generate JWT token
+    console.log('🔐 Generating JWT token...');
     const jwtSecret = process.env.JWT_SECRET || 'fallback-secret-key';
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       jwtSecret,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
+    console.log('🔐 Token generated successfully');
 
+    console.log('✅ Login successful for user:', email);
     res.json({
       success: true,
       message: 'Login successful',
@@ -104,8 +121,14 @@ router.post('/login', [
         token
       }
     });
-  } catch (error) {
-    console.error('Login error:', error);
+  } catch (error: any) {
+    console.error('❌ Login error details:', {
+      message: error?.message || 'Unknown error',
+      stack: error?.stack,
+      name: error?.name,
+      code: error?.code,
+      meta: error?.meta
+    });
     res.status(500).json({
       success: false,
       error: 'Internal server error'
