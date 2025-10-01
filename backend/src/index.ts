@@ -108,19 +108,38 @@ app.get('/api/health', (req, res) => {
 // Database health check
 app.get('/api/health/db', async (req, res) => {
   try {
+    console.log('🔍 Starting database health check...');
+    console.log('🔍 Database URL set:', !!process.env.DATABASE_URL);
+    console.log('🔍 Database URL preview:', process.env.DATABASE_URL?.substring(0, 20) + '...');
+    
     const prisma = require('./config/database').default;
-    await prisma.$queryRaw`SELECT 1`;
+    
+    // Test basic connection
+    await prisma.$connect();
+    console.log('✅ Prisma connection successful');
+    
+    // Test with a simple query
+    const result = await prisma.$queryRaw`SELECT 1 as test, NOW() as current_time`;
+    console.log('✅ Database query successful:', result);
+    
     res.json({
       status: 'OK',
       database: 'Connected',
+      query_result: result,
       timestamp: new Date().toISOString()
     });
   } catch (error: any) {
-    console.error('Database health check failed:', error);
+    console.error('❌ Database health check failed:', {
+      message: error?.message,
+      code: error?.code,
+      meta: error?.meta,
+      stack: error?.stack
+    });
     res.status(500).json({
       status: 'ERROR',
       database: 'Disconnected',
       error: error?.message || 'Unknown database error',
+      error_code: error?.code,
       timestamp: new Date().toISOString()
     });
   }
