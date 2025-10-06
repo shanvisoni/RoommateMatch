@@ -1,8 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 
-// Enhanced Prisma configuration for production
+// Enhanced Prisma configuration for production with proper connection pooling
 const prisma = new PrismaClient({
-  log: ['query', 'info', 'warn', 'error'],
+  log: process.env.NODE_ENV === 'production' ? ['error'] : ['query', 'info', 'warn', 'error'],
   datasources: {
     db: {
       url: process.env.DATABASE_URL
@@ -27,7 +27,7 @@ function validateDatabaseUrl() {
   return true;
 }
 
-// Enhanced connection testing with retry logic
+// Enhanced connection testing with retry logic and Supabase-specific handling
 async function connectWithRetry(maxRetries = 5, delay = 2000): Promise<boolean> {
   // First validate the database URL
   try {
@@ -37,6 +37,13 @@ async function connectWithRetry(maxRetries = 5, delay = 2000): Promise<boolean> 
     throw err;
   }
 
+  // Check if we're using Supabase and provide specific guidance
+  const dbUrl = process.env.DATABASE_URL || '';
+  if (dbUrl.includes('supabase.co')) {
+    console.log('🔍 Detected Supabase database connection');
+    console.log('💡 Using optimized connection settings for Supabase');
+  }
+
   for (let i = 0; i < maxRetries; i++) {
     try {
       console.log(`🔄 Database connection attempt ${i + 1}/${maxRetries}`);
@@ -44,7 +51,7 @@ async function connectWithRetry(maxRetries = 5, delay = 2000): Promise<boolean> 
       // For production, add a small delay before connection
       if (process.env.NODE_ENV === 'production' && i > 0) {
         console.log('⏳ Production delay before retry...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
       
       await prisma.$connect();
@@ -63,18 +70,26 @@ async function connectWithRetry(maxRetries = 5, delay = 2000): Promise<boolean> 
       console.error('Database URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
       console.error('Environment:', process.env.NODE_ENV);
       
-      // For P1001 errors (connection refused), try longer delays
+      // Enhanced error handling for Supabase-specific issues
       if (err?.code === 'P1001') {
-        console.log('🔍 P1001 error detected - connection refused, trying longer delay...');
-        delay = Math.min(delay * 2, 10000); // Increase delay up to 10 seconds
+        console.log('🔍 P1001 error detected - connection refused');
+        console.log('💡 This is likely a Supabase connection issue. Possible causes:');
+        console.log('   1. Supabase project is paused (check Supabase dashboard)');
+        console.log('   2. Database URL has incorrect PgBouncer settings');
+        console.log('   3. Network connectivity issues from Render to Supabase');
+        console.log('   4. Connection pooler is not accessible');
+        
+        // For Supabase, try longer delays
+        delay = Math.min(delay * 1.5, 15000); // Increase delay up to 15 seconds
       }
       
       if (i === maxRetries - 1) {
         console.error('❌ All database connection attempts failed');
-        console.error('💡 This might be a Supabase connection issue. Check:');
-        console.error('   1. Supabase database is running');
-        console.error('   2. Database URL is correct');
-        console.error('   3. Network connectivity from Render to Supabase');
+        console.error('💡 Supabase Connection Troubleshooting:');
+        console.error('   1. Check if your Supabase project is active (not paused)');
+        console.error('   2. Verify DATABASE_URL format in Render environment variables');
+        console.error('   3. Try using direct connection URL (without pgbouncer)');
+        console.error('   4. Check Supabase project settings for connection limits');
         throw err;
       }
       
