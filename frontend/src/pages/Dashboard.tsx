@@ -6,7 +6,7 @@ import { matchingService } from '../services/matching';
 import { savedProfilesService } from '../services/savedProfiles';
 import { connectionsService } from '../services/connections';
 import type { Connection } from '../services/connections';
-import { User, CheckCircle, XCircle, Clock, Search, Filter, MoreVertical, RefreshCw, MessageSquare, ArrowUpRight, Trash2 } from 'lucide-react';
+import { User, CheckCircle, XCircle, Clock, Search, Filter, RefreshCw, MessageSquare, ArrowUpRight, Trash2, Eye, X, MapPin, Calendar, Briefcase, DollarSign, Home, ChefHat, Users, Cigarette, Wine } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Dashboard: React.FC = () => {
@@ -28,6 +28,8 @@ const Dashboard: React.FC = () => {
   const [activeStatus, setActiveStatus] = useState<'pending' | 'accepted' | 'rejected'>('pending');
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -183,6 +185,28 @@ const Dashboard: React.FC = () => {
     console.log('Navigating to messages with userId:', userId);
     // Navigate to messages page with the user ID as a parameter
     navigate(`/messages?userId=${userId}`);
+  };
+
+  const handleViewProfile = async (userId: number) => {
+    try {
+      console.log('🔍 Loading profile for userId:', userId);
+      const { data: profileData, error } = await profileService.getProfile(userId);
+      
+      if (error) {
+        console.error('❌ Failed to load profile:', error);
+        toast.error('Failed to load profile');
+        return;
+      }
+      
+      if (profileData) {
+        console.log('✅ Profile loaded:', profileData);
+        setSelectedProfile(profileData);
+        setShowProfileModal(true);
+      }
+    } catch (error) {
+      console.error('❌ Error loading profile:', error);
+      toast.error('Failed to load profile');
+    }
   };
 
   const handleWithdrawConnection = async (connectionId: number) => {
@@ -486,27 +510,37 @@ const Dashboard: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          {activeTab === 'received' && connection.status === 'pending' ? (
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleAcceptConnection(connection.id)}
-                                disabled={connectionLoading}
-                                className="inline-flex items-center px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 text-sm"
-                              >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Accept
-                              </button>
-                              <button
-                                onClick={() => handleRejectConnection(connection.id)}
-                                disabled={connectionLoading}
-                                className="inline-flex items-center px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 text-sm"
-                              >
-                                <XCircle className="h-4 w-4 mr-1" />
-                                Reject
-                              </button>
-                            </div>
-                          ) : activeTab === 'received' && connection.status === 'accepted' ? (
-                            <div className="flex space-x-2">
+                          <div className="flex space-x-2">
+                            {/* View Profile Button - Always available */}
+                            <button
+                              onClick={() => handleViewProfile(activeTab === 'sent' ? connection.receiverId : connection.requesterId)}
+                              className="inline-flex items-center px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View Profile
+                            </button>
+                            
+                            {/* Status-specific actions */}
+                            {activeTab === 'received' && connection.status === 'pending' ? (
+                              <>
+                                <button
+                                  onClick={() => handleAcceptConnection(connection.id)}
+                                  disabled={connectionLoading}
+                                  className="inline-flex items-center px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 text-sm"
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Accept
+                                </button>
+                                <button
+                                  onClick={() => handleRejectConnection(connection.id)}
+                                  disabled={connectionLoading}
+                                  className="inline-flex items-center px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 text-sm"
+                                >
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Reject
+                                </button>
+                              </>
+                            ) : activeTab === 'received' && connection.status === 'accepted' ? (
                               <button
                                 onClick={() => handleMessageUser(connection.requesterId)}
                                 className="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
@@ -514,9 +548,7 @@ const Dashboard: React.FC = () => {
                                 <MessageSquare className="h-4 w-4 mr-1" />
                                 Message
                               </button>
-                            </div>
-                          ) : activeTab === 'sent' && connection.status === 'accepted' ? (
-                            <div className="flex space-x-2">
+                            ) : activeTab === 'sent' && connection.status === 'accepted' ? (
                               <button
                                 onClick={() => handleMessageUser(connection.receiverId)}
                                 className="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
@@ -524,30 +556,26 @@ const Dashboard: React.FC = () => {
                                 <MessageSquare className="h-4 w-4 mr-1" />
                                 Message
                               </button>
-                            </div>
-                          ) : activeTab === 'sent' && connection.status === 'pending' ? (
-                            <div className="flex space-x-2">
-                              <button
-                                disabled
-                                className="inline-flex items-center px-3 py-1 bg-yellow-100 text-yellow-600 rounded-md cursor-not-allowed text-sm"
-                              >
-                                <ArrowUpRight className="h-4 w-4 mr-1" />
-                                Follow Up
-                              </button>
-                              <button
-                                onClick={() => handleWithdrawConnection(connection.id)}
-                                disabled={connectionLoading}
-                                className="inline-flex items-center px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 text-sm"
-                              >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Withdraw
-                              </button>
-                            </div>
-                          ) : (
-                            <button className="text-gray-400 hover:text-gray-600">
-                              <MoreVertical className="h-4 w-4" />
-                            </button>
-                          )}
+                            ) : activeTab === 'sent' && connection.status === 'pending' ? (
+                              <>
+                                <button
+                                  disabled
+                                  className="inline-flex items-center px-3 py-1 bg-yellow-100 text-yellow-600 rounded-md cursor-not-allowed text-sm"
+                                >
+                                  <ArrowUpRight className="h-4 w-4 mr-1" />
+                                  Follow Up
+                                </button>
+                                <button
+                                  onClick={() => handleWithdrawConnection(connection.id)}
+                                  disabled={connectionLoading}
+                                  className="inline-flex items-center px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 text-sm"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                  Withdraw
+                                </button>
+                              </>
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -623,6 +651,196 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Profile View Modal */}
+      {showProfileModal && selectedProfile && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  {selectedProfile.profilePhotoUrl && !selectedProfile.profilePhotoUrl.startsWith('blob:') ? (
+                    <img
+                      src={selectedProfile.profilePhotoUrl}
+                      alt={selectedProfile.name}
+                      className="w-16 h-16 rounded-full object-cover mr-4 border-4 border-white shadow-lg"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mr-4 border-4 border-white shadow-lg">
+                      <User className="h-8 w-8 text-white" />
+                    </div>
+                  )}
+                  <div>
+                    <h2 className="text-2xl font-bold">{selectedProfile.name}</h2>
+                    <p className="text-blue-100">{selectedProfile.age} years old</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowProfileModal(false)}
+                  className="text-white hover:text-gray-200 transition-colors"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Basic Information */}
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">Basic Information</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                          <User className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Name</p>
+                          <p className="text-gray-900 font-medium">{selectedProfile.name}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                          <Calendar className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Age</p>
+                          <p className="text-gray-900 font-medium">{selectedProfile.age} years old</p>
+                        </div>
+                      </div>
+
+                      {selectedProfile.gender && (
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center mr-3">
+                            <User className="h-5 w-5 text-pink-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Gender</p>
+                            <p className="text-gray-900 font-medium">{selectedProfile.gender}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                          <MapPin className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Location</p>
+                          <p className="text-gray-900 font-medium">{selectedProfile.location}</p>
+                        </div>
+                      </div>
+
+                      {selectedProfile.profession && (
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                            <Briefcase className="h-5 w-5 text-yellow-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Profession</p>
+                            <p className="text-gray-900 font-medium">{selectedProfile.profession}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedProfile.budget && (
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
+                            <DollarSign className="h-5 w-5 text-indigo-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Budget</p>
+                            <p className="text-gray-900 font-medium">${selectedProfile.budget.toLocaleString()}/month</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* About Section */}
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">About</h3>
+                    <p className="text-gray-700 leading-relaxed">{selectedProfile.bio}</p>
+                  </div>
+                </div>
+
+                {/* Lifestyle & Preferences */}
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">Lifestyle & Preferences</h3>
+                    <div className="space-y-4">
+                      {selectedProfile.socialLevel && (
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                            <Users className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Social Level</p>
+                            <p className="text-gray-900 font-medium">{selectedProfile.socialLevel.replace('_', ' ')}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                          <Home className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Pets</p>
+                          <p className="text-gray-900 font-medium">{selectedProfile.pets ? 'Yes' : 'No'}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                          <Cigarette className="h-5 w-5 text-red-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Smoking</p>
+                          <p className="text-gray-900 font-medium">{selectedProfile.smoking ? 'Yes' : 'No'}</p>
+                        </div>
+                      </div>
+
+                      {selectedProfile.drinking && (
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
+                            <Wine className="h-5 w-5 text-indigo-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Drinking</p>
+                            <p className="text-gray-900 font-medium">
+                              {selectedProfile.drinking === 'no' ? 'Non-drinker' : 
+                               selectedProfile.drinking === 'occasionally' ? 'Occasionally' :
+                               selectedProfile.drinking === 'socially' ? 'Socially' :
+                               selectedProfile.drinking === 'regularly' ? 'Regularly' : selectedProfile.drinking}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedProfile.cooking && (
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                            <ChefHat className="h-5 w-5 text-orange-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Cooking</p>
+                            <p className="text-gray-900 font-medium">{selectedProfile.cooking}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

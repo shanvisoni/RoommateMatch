@@ -40,6 +40,21 @@ const SavedProfiles: React.FC = () => {
     loadSavedProfiles();
   }, []);
 
+  // Refresh connection statuses when component becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && savedProfiles.length > 0) {
+        // Re-check connection statuses when user returns to the page
+        savedProfiles.forEach((profile: SavedProfile) => {
+          checkConnectionStatus(profile.userId);
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [savedProfiles]);
+
   const loadSavedProfiles = async () => {
     try {
       setLoading(true);
@@ -100,6 +115,8 @@ const SavedProfiles: React.FC = () => {
     if (profile) {
       setSelectedProfile(profile);
       setShowProfileModal(true);
+      // Check connection status when opening the modal to ensure it's up-to-date
+      checkConnectionStatus(profile.userId);
     }
   };
 

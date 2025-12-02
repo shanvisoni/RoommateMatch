@@ -13,12 +13,12 @@ import {
   Music, 
   ChefHat, 
   Star, 
-  Heart, 
   Users, 
   Save,
   X,
-  Coffee,
-  UserCheck
+  UserCheck,
+  Cigarette,
+  Wine
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -596,7 +596,7 @@ const Profile: React.FC = () => {
 
                   <div className="flex items-center">
                     <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mr-4">
-                      <Heart className="h-6 w-6 text-red-600" />
+                      <Cigarette className="h-6 w-6 text-red-600" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">Smoking</p>
@@ -618,7 +618,7 @@ const Profile: React.FC = () => {
                   {profile?.drinking && (
                     <div className="flex items-center">
                       <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mr-4">
-                        <Coffee className="h-6 w-6 text-indigo-600" />
+                        <Wine className="h-6 w-6 text-indigo-600" />
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-500">Drinking</p>

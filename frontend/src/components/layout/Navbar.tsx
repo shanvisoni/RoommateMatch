@@ -98,12 +98,12 @@ const Navbar: React.FC = () => {
 
   if (loading) {
     return (
-      <nav className="bg-white shadow-sm border-b border-gray-200">
+      <nav className="bg-[#1f3256] text-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="h-8 w-8 bg-blue-600 rounded-lg animate-pulse"></div>
+                <div className="h-8 w-8 bg-white/20 rounded-lg animate-pulse"></div>
               </div>
             </div>
           </div>
@@ -114,29 +114,29 @@ const Navbar: React.FC = () => {
 
   if (!user) {
     return (
-      <nav className="bg-white shadow-sm border-b border-gray-200">
+      <nav className="bg-[#1f3256] text-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <Link to="/" className="flex items-center">
                 <div className="flex items-center space-x-2">
-                  <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <div className="h-8 w-8 bg-white/20 rounded-lg flex items-center justify-center">
                     <Users className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-xl font-bold text-gray-900">RoomieMatch</span>
+                  <span className="text-xl font-bold text-white">RoomieMatch</span>
                 </div>
               </Link>
             </div>
             <div className="flex items-center space-x-4">
               <Link
                 to="/login"
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                className="text-white/80 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 Login
               </Link>
               <Link
                 to="/register"
-                className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                className="bg-white text-[#1f3256] px-4 py-2 rounded-md text-sm font-medium hover:bg-white/90 transition-colors"
               >
                 Sign Up
               </Link>
@@ -148,16 +148,16 @@ const Navbar: React.FC = () => {
   }
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    <nav className="bg-[#1f3256] text-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
               <div className="flex items-center space-x-2">
-                <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <div className="h-8 w-8 bg-white/20 rounded-lg flex items-center justify-center">
                   <Users className="h-5 w-5 text-white" />
                 </div>
-                <span className="text-xl font-bold text-gray-900">RoomieMatch</span>
+                <span className="text-xl font-bold text-white">RoomieMatch</span>
               </div>
             </Link>
           </div>
@@ -169,8 +169,8 @@ const Navbar: React.FC = () => {
                 to="/dashboard"
                 className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   isActive('/dashboard') 
-                    ? 'text-blue-600 bg-blue-50' 
-                    : 'text-gray-700 hover:text-blue-600'
+                    ? 'text-white bg-white/10' 
+                    : 'text-white/80 hover:text-white'
                 }`}
               >
                 <Home className="h-4 w-4 mr-2" />
@@ -183,8 +183,8 @@ const Navbar: React.FC = () => {
                     to="/discover"
                     className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       isActive('/discover') 
-                        ? 'text-blue-600 bg-blue-50' 
-                        : 'text-gray-700 hover:text-blue-600'
+                        ? 'text-white bg-white/10' 
+                        : 'text-white/80 hover:text-white'
                     }`}
                   >
                     <Users className="h-4 w-4 mr-2" />
@@ -195,8 +195,8 @@ const Navbar: React.FC = () => {
                     to="/messages"
                     className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       isActive('/messages') 
-                        ? 'text-blue-600 bg-blue-50' 
-                        : 'text-gray-700 hover:text-blue-600'
+                        ? 'text-white bg-white/10' 
+                        : 'text-white/80 hover:text-white'
                     }`}
                   >
                     <MessageCircle className="h-4 w-4 mr-2" />
@@ -207,8 +207,8 @@ const Navbar: React.FC = () => {
                     to="/saved"
                     className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       isActive('/saved') 
-                        ? 'text-blue-600 bg-blue-50' 
-                        : 'text-gray-700 hover:text-blue-600'
+                        ? 'text-white bg-white/10' 
+                        : 'text-white/80 hover:text-white'
                     }`}
                   >
                     <Bookmark className="h-4 w-4 mr-2" />
@@ -218,7 +218,7 @@ const Navbar: React.FC = () => {
               ) : (
                 <Link
                   to="/create-profile"
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                  className="flex items-center px-4 py-2 bg-white text-[#1f3256] rounded-md text-sm font-medium hover:bg-white/90 transition-colors"
                 >
                   Create Profile
                 </Link>
@@ -229,14 +229,14 @@ const Navbar: React.FC = () => {
             <div className="relative user-menu-container">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center space-x-3 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="flex items-center space-x-3 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-[#1f3256]"
               >
                 <div className="flex items-center space-x-2">
-                  <div className="h-8 w-8 bg-gray-200 rounded-full flex items-center justify-center">
-                    <UserIcon className="h-5 w-5 text-gray-600" />
+                  <div className="h-8 w-8 bg-white/20 rounded-full flex items-center justify-center">
+                    <UserIcon className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-gray-700 font-medium">{user.email}</span>
-                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                  <span className="text-white font-medium">{user.email}</span>
+                  <ChevronDown className="h-4 w-4 text-white/80" />
                 </div>
               </button>
 

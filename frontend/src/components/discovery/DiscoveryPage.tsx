@@ -18,9 +18,10 @@ import {
   MessageCircle,
   Eye,
   X,
-  Coffee,
-  Heart,
-  Users
+  Users,
+  Cigarette,
+  Wine,
+  Heart
 } from 'lucide-react';
 
 interface Profile {
@@ -100,6 +101,21 @@ const DiscoveryPage: React.FC = () => {
     loadProfiles();
   }, []);
 
+  // Refresh connection statuses when component becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && allProfiles.length > 0) {
+        // Re-check connection statuses when user returns to the page
+        allProfiles.forEach((profile: Profile) => {
+          checkConnectionStatus(profile.userId);
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [allProfiles]);
+
   const loadProfiles = async () => {
     try {
       setLoading(true);
@@ -127,6 +143,8 @@ const DiscoveryPage: React.FC = () => {
     if (profile) {
       setSelectedProfile(profile);
       setShowProfileModal(true);
+      // Check connection status when opening the modal to ensure it's up-to-date
+      checkConnectionStatus(profile.userId);
     }
   };
 
@@ -153,6 +171,7 @@ const DiscoveryPage: React.FC = () => {
     try {
       await connectionsService.sendConnectionRequest(userId);
       setConnectionStatuses(prev => new Map(prev).set(userId, 'pending'));
+      toast.success('Connection request sent!');
     } catch (error: any) {
       toast.error('Failed to send connection request: ' + error.message);
     }
@@ -526,7 +545,7 @@ const DiscoveryPage: React.FC = () => {
 
                       <div className="flex items-center">
                         <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
-                          <Heart className="h-5 w-5 text-red-600" />
+                          <Cigarette className="h-5 w-5 text-red-600" />
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-500">Smoking</p>
@@ -537,7 +556,7 @@ const DiscoveryPage: React.FC = () => {
                       {selectedProfile.drinking && (
                         <div className="flex items-center">
                           <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
-                            <Coffee className="h-5 w-5 text-indigo-600" />
+                            <Wine className="h-5 w-5 text-indigo-600" />
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-500">Drinking</p>
