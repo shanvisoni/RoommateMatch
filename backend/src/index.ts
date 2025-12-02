@@ -132,15 +132,23 @@ app.get('/api/health/db', async (req, res) => {
     console.error('❌ Database health check failed:', {
       message: error?.message,
       code: error?.code,
-      meta: error?.meta,
-      stack: error?.stack
+      meta: error?.meta
     });
     res.status(500).json({
       status: 'ERROR',
       database: 'Disconnected',
       error: error?.message || 'Unknown database error',
       error_code: error?.code,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      troubleshooting: {
+        message: 'If this is a Supabase database, check:',
+        steps: [
+          '1. Verify Supabase project is active (not paused)',
+          '2. Check DATABASE_URL format and credentials',
+          '3. Ensure network connectivity to Supabase',
+          '4. Try direct connection URL without pgbouncer'
+        ]
+      }
     });
   }
 });

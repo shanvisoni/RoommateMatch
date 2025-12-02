@@ -100,11 +100,11 @@ async function connectWithRetry(maxRetries = 5, delay = 2000): Promise<boolean> 
   return false; // This should never be reached due to throw above
 }
 
-// Test the connection with retry logic
-connectWithRetry()
-  .catch((err) => {
-    console.error('❌ Final database connection error:', err);
-    process.exit(1);
-  });
+// Connection will be established lazily when first query is made
+// This prevents blocking server startup if database is temporarily unavailable
+// You can still test connection using connectWithRetry() when needed
+
+// Export the connect function for manual testing if needed
+export { connectWithRetry };
 
 export default prisma;
