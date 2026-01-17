@@ -2,7 +2,7 @@ import axios from 'axios';
 import { tokenStorage } from '../utils/supabase';
 import toast from 'react-hot-toast';
 
-const API_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:5000';
+import { API_URL } from '../config';
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -70,7 +70,7 @@ export const connectionsService = {
       const response = await api.post('/connections/request', {
         receiverId
       });
-      
+
       toast.success('Connection request sent!');
       return { data: response.data.data, error: null };
     } catch (error: any) {
@@ -82,7 +82,7 @@ export const connectionsService = {
   async acceptConnection(connectionId: number) {
     try {
       const response = await api.put(`/connections/accept/${connectionId}`);
-      
+
       toast.success('Connection accepted!');
       return { data: response.data.data, error: null };
     } catch (error: any) {
@@ -94,7 +94,7 @@ export const connectionsService = {
   async rejectConnection(connectionId: number) {
     try {
       const response = await api.put(`/connections/reject/${connectionId}`);
-      
+
       toast.success('Connection rejected!');
       return { data: response.data.data, error: null };
     } catch (error: any) {
@@ -115,7 +115,7 @@ export const connectionsService = {
   async deleteConnection(connectionId: number) {
     try {
       await api.delete(`/connections/${connectionId}`);
-      
+
       toast.success('Connection deleted!');
       return { data: true, error: null };
     } catch (error: any) {

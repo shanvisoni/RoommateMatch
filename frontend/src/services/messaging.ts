@@ -3,7 +3,7 @@ import { tokenStorage } from '../utils/supabase';
 import { socketService } from './socket';
 import toast from 'react-hot-toast';
 
-const API_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:5000';
+import { API_URL } from '../config';
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -44,7 +44,7 @@ export const messagingService = {
         content
       });
       console.log('📤 Send message API response:', response.data);
-      
+
       // Send message via Socket.io for real-time delivery
       if (response.data && response.data.data) {
         const roomId = `chat_${receiverId}`;
@@ -56,7 +56,7 @@ export const messagingService = {
           createdAt: response.data.data.createdAt
         });
       }
-      
+
       return { data: response.data, error: null };
     } catch (error: any) {
       console.error('❌ Send message failed:', error);
@@ -97,17 +97,17 @@ export const messagingService = {
   async subscribeToMessages(userId: number, callback: (message: Message) => void) {
     try {
       console.log('🔌 Setting up WebSocket subscription for user:', userId);
-      
+
       // Connect to socket if not already connected
       const socket = socketService.connect();
-      
+
       // Wait a bit for connection to establish
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Join the room for this conversation
       const roomId = `chat_${userId}`;
       socketService.joinRoom(roomId);
-      
+
       // Listen for new messages
       socketService.onMessage((data) => {
         console.log('📨 WebSocket message received:', data);
@@ -115,7 +115,7 @@ export const messagingService = {
           callback(data);
         }
       });
-      
+
       return () => {
         console.log('🔌 Cleaning up WebSocket subscription for room:', roomId);
         socketService.leaveRoom(roomId);
@@ -130,16 +130,16 @@ export const messagingService = {
     try {
       const response = await api.get(`/connections/status/${userId}`);
       const connectionStatus = response.data.data.status;
-      return { 
-        canMessage: connectionStatus === 'accepted', 
+      return {
+        canMessage: connectionStatus === 'accepted',
         status: connectionStatus,
-        error: null 
+        error: null
       };
     } catch (error: any) {
-      return { 
-        canMessage: false, 
+      return {
+        canMessage: false,
         status: 'unknown',
-        error 
+        error
       };
     }
   }

@@ -2,7 +2,7 @@ import axios from 'axios';
 import { tokenStorage } from '../utils/supabase';
 import toast from 'react-hot-toast';
 
-const API_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:5000';
+import { API_URL } from '../config';
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -62,7 +62,7 @@ export const profileService = {
       console.log('🚀 Sending profile data:', profileData);
       const response = await api.post('/profile', profileData);
       console.log('📡 Profile creation response:', response.data);
-      
+
       if (response.data.success) {
         toast.success('Profile created successfully!');
         return { data: response.data.data, error: null };
@@ -80,7 +80,7 @@ export const profileService = {
     try {
       console.log('🔍 Getting profile for userId:', userId);
       let response;
-      
+
       if (userId) {
         response = await api.get(`/profile/${userId}`);
       } else {
@@ -124,7 +124,7 @@ export const profileService = {
   }) {
     try {
       const response = await api.put('/profile', profileData);
-      
+
       if (response.data.success) {
         toast.success('Profile updated successfully!');
         return { data: response.data.data, error: null };
@@ -141,7 +141,7 @@ export const profileService = {
   async getAllProfiles() {
     try {
       const response = await api.get('/profile/all');
-      
+
       if (response.data.success) {
         return { data: response.data.data, error: null };
       } else {
@@ -169,10 +169,10 @@ export const profileService = {
         // Use base64 image if available (works perfectly for deployment)
         const base64Image = response.data.data.base64Image;
         const photoUrl = response.data.data.photoUrl;
-        
+
         // Prefer base64 for reliability, fallback to URL
         const finalImageUrl = base64Image || `${API_URL}${photoUrl}`;
-        
+
         console.log('📸 Uploaded photo - Base64 available:', !!base64Image);
         console.log('📸 Final image URL:', finalImageUrl);
         toast.success('Photo uploaded successfully!');

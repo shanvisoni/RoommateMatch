@@ -2,7 +2,7 @@ import axios from 'axios';
 import { tokenStorage } from '../utils/supabase';
 import toast from 'react-hot-toast';
 
-const API_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:5000';
+import { API_URL } from '../config';
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -31,7 +31,7 @@ export const matchingService = {
       const response = await api.post('/matching/like', {
         targetUserId
       });
-      
+
       toast.success('Like sent!');
       return { data: response.data, error: null };
     } catch (error: any) {
@@ -45,7 +45,7 @@ export const matchingService = {
       const response = await api.post('/matching/pass', {
         targetUserId
       });
-      
+
       return { data: response.data, error: null };
     } catch (error: any) {
       toast.error('Failed to pass user: ' + error.message);

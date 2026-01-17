@@ -3,10 +3,7 @@ import { tokenStorage } from '../utils/supabase';
 import toast from 'react-hot-toast';
 
 // Production API URL configuration
-const API_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.MODE === 'production' 
-    ? 'https://roommatematch-skb3.onrender.com'
-    : (import.meta.env.REACT_APP_API_URL || 'http://localhost:5000'));
+import { API_URL } from '../config';
 
 // Debug: Log the API URL being used
 console.log('🔍 API_URL being used:', API_URL);
@@ -37,7 +34,7 @@ export const authService = {
   async register(email: string, password: string) {
     try {
       const response = await api.post('/auth/register', { email, password });
-      
+
       if (response.data.success) {
         const { user, token } = response.data.data;
         tokenStorage.setToken(token);
@@ -58,11 +55,11 @@ export const authService = {
     try {
       console.log('🔐 Attempting login to:', `${API_URL}/api/auth/login`);
       console.log('🔐 Request data:', { email, password: '***' });
-      
+
       const response = await api.post('/auth/login', { email, password });
-      
+
       console.log('🔐 Login response:', response.data);
-      
+
       if (response.data.success) {
         const { user, token } = response.data.data;
         tokenStorage.setToken(token);
@@ -80,7 +77,7 @@ export const authService = {
         url: error.config?.url,
         baseURL: error.config?.baseURL
       });
-      
+
       const message = error.response?.data?.error || error.message;
       toast.error('Login failed: ' + message);
       return { data: null, error: { message } };
@@ -111,7 +108,7 @@ export const authService = {
 
       console.log('🔍 Checking current user with token:', token.substring(0, 20) + '...');
       const response = await api.get('/auth/me');
-      
+
       if (response.data.success) {
         const user = response.data.data.user;
         tokenStorage.setUser(user);
@@ -131,7 +128,7 @@ export const authService = {
   async resetPassword(email: string) {
     try {
       const response = await api.post('/auth/reset-password', { email });
-      
+
       if (response.data.success) {
         toast.success('Password reset instructions sent to your email!');
         return { error: null };

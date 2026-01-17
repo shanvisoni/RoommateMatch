@@ -2,7 +2,7 @@ import axios from 'axios';
 import { tokenStorage } from '../utils/supabase';
 import toast from 'react-hot-toast';
 
-const API_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:5000';
+import { API_URL } from '../config';
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -84,7 +84,7 @@ export const feedbackService = {
   }) {
     try {
       const response = await api.post('/feedback/create', data);
-      
+
       toast.success('Feedback submitted!');
       return { data: response.data.data, error: null };
     } catch (error: any) {
@@ -102,7 +102,7 @@ export const feedbackService = {
   }) {
     try {
       const response = await api.put(`/feedback/update/${feedbackId}`, data);
-      
+
       toast.success('Feedback updated!');
       return { data: response.data.data, error: null };
     } catch (error: any) {
@@ -114,7 +114,7 @@ export const feedbackService = {
   async deleteFeedback(feedbackId: number) {
     try {
       await api.delete(`/feedback/${feedbackId}`);
-      
+
       toast.success('Feedback deleted!');
       return { data: true, error: null };
     } catch (error: any) {

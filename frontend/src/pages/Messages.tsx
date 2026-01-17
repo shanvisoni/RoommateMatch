@@ -5,6 +5,7 @@ import type { ChatRoom, Message } from '../services/messaging';
 import { connectionsService } from '../services/connections';
 import { authService } from '../services/auth';
 import { MessageCircle, Send, User, Lock, UserCheck, Clock } from 'lucide-react';
+import { API_URL } from '../config';
 
 const Messages: React.FC = () => {
   console.log('🔄 Messages component loaded - version 2.0');
@@ -27,17 +28,17 @@ const Messages: React.FC = () => {
       try {
         console.log('🚀 Starting Messages initialization...');
         setError(null);
-        
+
         // Load current user
         const { user } = await authService.getCurrentUser();
         if (user) {
           setCurrentUserId(user.id);
           console.log('✅ Current user loaded:', user.id);
-          
+
           // Load all people you can chat with (after current user is set)
           await loadAllChatUsers();
         }
-        
+
         // Load chat rooms
         const { data: chatData, error: chatError } = await messagingService.getChatRooms();
         if (chatError) {
@@ -48,10 +49,10 @@ const Messages: React.FC = () => {
           setChatRooms(rooms);
           console.log('✅ Chat rooms loaded:', rooms.length);
         }
-        
+
         // Test backend connectivity
         await testBackendConnection();
-        
+
         setLoading(false);
         console.log('✅ Messages initialization complete');
       } catch (err) {
@@ -60,7 +61,7 @@ const Messages: React.FC = () => {
         setLoading(false);
       }
     };
-    
+
     init();
   }, []);
 
@@ -76,12 +77,12 @@ const Messages: React.FC = () => {
     if (!selectedChat || !currentUserId) return;
 
     console.log('🔌 Setting up real-time messaging for user:', selectedChat.user2Id);
-    
+
     // Subscribe to real-time messages for this conversation
     const setupSubscription = async () => {
       const unsubscribe = await messagingService.subscribeToMessages(selectedChat.user2Id, (newMessage) => {
         console.log('📨 New message received:', newMessage);
-        
+
         // Add the new message to the current messages
         setMessages(prev => {
           // Check if message already exists to avoid duplicates
@@ -90,14 +91,14 @@ const Messages: React.FC = () => {
             console.log('📨 Message already exists, skipping duplicate');
             return prev;
           }
-          
+
           // Remove any temporary messages with the same content from the same sender
-          const filteredPrev = prev.filter(msg => 
-            !(msg.isTemporary && 
-              msg.senderId === newMessage.senderId && 
+          const filteredPrev = prev.filter(msg =>
+            !(msg.isTemporary &&
+              msg.senderId === newMessage.senderId &&
               msg.content === newMessage.content)
           );
-          
+
           return [...filteredPrev, newMessage];
         });
       });
@@ -118,26 +119,26 @@ const Messages: React.FC = () => {
   const loadAllChatUsers = async () => {
     try {
       console.log('👥 Loading all chat users...');
-      
+
       if (!currentUserId) {
         console.log('⚠️ Current user ID not available yet');
         return;
       }
-      
+
       // Get accepted connections
       const { data: sentConnections } = await connectionsService.getSentConnections();
       const { data: receivedConnections } = await connectionsService.getReceivedConnections();
-      
+
       console.log('📊 Sent connections:', sentConnections?.length || 0);
       console.log('📊 Received connections:', receivedConnections?.length || 0);
-      
+
       const acceptedConnections = [
         ...(sentConnections || []).filter((c: any) => c.status === 'accepted'),
         ...(receivedConnections || []).filter((c: any) => c.status === 'accepted')
       ];
-      
+
       console.log('✅ Accepted connections:', acceptedConnections.length);
-      
+
       // Extract unique users from accepted connections
       const users = acceptedConnections.map((conn: any) => {
         const user = conn.requesterId === currentUserId ? conn.receiver : conn.requester;
@@ -150,12 +151,12 @@ const Messages: React.FC = () => {
           isFromConnection: true
         };
       });
-      
+
       // Remove duplicates
-      const uniqueUsers = users.filter((user, index, self) => 
+      const uniqueUsers = users.filter((user, index, self) =>
         index === self.findIndex(u => u.id === user.id)
       );
-      
+
       setAllChatUsers(uniqueUsers);
       console.log('✅ All chat users loaded:', uniqueUsers.length);
     } catch (error) {
@@ -167,13 +168,13 @@ const Messages: React.FC = () => {
   const testBackendConnection = async () => {
     try {
       console.log('🔌 Testing backend connection...');
-      const response = await fetch(`${import.meta.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/me`, {
+      const response = await fetch(`${API_URL}/api/auth/me`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       if (response.ok) {
         console.log('✅ Backend is running and accessible');
       } else {
@@ -188,30 +189,43 @@ const Messages: React.FC = () => {
   // Handle URL parameter for direct user messaging
   useEffect(() => {
     const userId = searchParams.get('userId');
+    // We can try to find the chat in existing rooms
     if (userId && chatRooms.length > 0) {
-      const targetChat = chatRooms.find(chat => 
+      const targetChat = chatRooms.find(chat =>
         chat.user1Id === parseInt(userId) || chat.user2Id === parseInt(userId)
       );
       if (targetChat) {
         setSelectedChat(targetChat);
         console.log('✅ Chat selected from URL:', targetChat);
+        return;
       }
-    } else if (userId && chatRooms.length === 0 && !loading) {
+    }
+
+    // If not found in chatRooms (new conversation), create a temp chat
+    // We shouldn't check chatRooms.length === 0 specifically, but rather if we found the targetChat or not
+    // But keeping existing structure slightly modified for safety
+    if (userId && !loading) {
+      const targetUserId = parseInt(userId);
+
+      // Try to find user details from our loaded connections
+      const userDetails = allChatUsers.find(u => u.id === targetUserId);
+
       // Create temporary chat for new conversation
       const tempChat: ChatRoom = {
         id: -1,
         user1Id: currentUserId || 1,
-        user2Id: parseInt(userId),
+        user2Id: targetUserId,
         otherUser: {
-          id: parseInt(userId),
-          name: 'User',
-          profilePhotoUrl: null
+          id: targetUserId,
+          name: userDetails?.name || 'User',
+          profilePhotoUrl: userDetails?.profilePhotoUrl || null,
+          location: userDetails?.location // Pass location if available
         }
       };
       setSelectedChat(tempChat);
       console.log('✅ Temporary chat created:', tempChat);
     }
-  }, [searchParams, chatRooms, loading, currentUserId]);
+  }, [searchParams, chatRooms, loading, currentUserId, allChatUsers]);
 
   // Load messages when chat is selected
   useEffect(() => {
@@ -227,7 +241,7 @@ const Messages: React.FC = () => {
   const checkConnectionStatus = async (userId: number) => {
     try {
       console.log('🔍 Checking connection status for user:', userId);
-      
+
       // If user appears in allChatUsers (left sidebar), they should be messageable
       // This ensures consistency with the sidebar population logic
       const isInChatUsers = allChatUsers.some(user => user.id === userId);
@@ -270,7 +284,7 @@ const Messages: React.FC = () => {
         setMessages([]);
         return;
       }
-      
+
       // Ensure data is an array
       console.log('🔍 Raw messages data:', data, 'Type:', typeof data);
       let messagesArray = [];
@@ -286,7 +300,7 @@ const Messages: React.FC = () => {
       } else {
         console.log('⚠️ Data is not an array, setting empty array');
       }
-      
+
       setMessages(messagesArray);
       console.log('✅ Messages loaded:', messagesArray.length);
     } catch (error) {
@@ -310,7 +324,7 @@ const Messages: React.FC = () => {
 
       // Create a unique temporary ID for this message
       const tempId = `temp_${Date.now()}_${Math.random()}`;
-      
+
       // Optimistically add the message to the UI immediately
       const tempMessage = {
         id: tempId, // Unique temporary ID
@@ -320,7 +334,7 @@ const Messages: React.FC = () => {
         createdAt: new Date().toISOString(),
         isTemporary: true // Mark as temporary
       };
-      
+
       setMessages(prev => [...prev, tempMessage]);
 
       const { data, error } = await messagingService.sendMessage(
@@ -334,7 +348,7 @@ const Messages: React.FC = () => {
         // Remove the temporary message since WebSocket will add the real one
         setMessages(prev => prev.filter(msg => msg.id.toString() !== tempId));
         console.log('✅ Message sent successfully, temporary message removed');
-        
+
         // Set a timeout to remove temporary message if WebSocket doesn't replace it
         setTimeout(() => {
           setMessages(prev => prev.filter(msg => msg.id.toString() !== tempId));
@@ -362,8 +376,8 @@ const Messages: React.FC = () => {
         <div className="text-center">
           <div className="text-red-500 text-xl mb-4">⚠️ Error</div>
           <p className="text-gray-600 mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="btn-primary"
           >
             Reload Page
@@ -411,294 +425,291 @@ const Messages: React.FC = () => {
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">Messages</h1>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
-          {/* Chat List */}
-          <div className="lg:col-span-1">
-            <div className="card h-full overflow-hidden">
-              <div className="p-4 border-b border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Conversations</h2>
-                  <Link to="/discover" className="text-primary-600 hover:text-primary-700 text-sm font-medium">
-                    New Chat
-                  </Link>
-                </div>
-              </div>
-              <div className="space-y-2 overflow-y-auto p-4">
-                {(!allChatUsers || allChatUsers.length === 0) ? (
-                  <div className="flex flex-col items-center justify-center p-8 text-center">
-                    <MessageCircle className="h-12 w-12 text-gray-300 mb-4" />
-                    <p className="text-gray-500 text-lg font-medium mb-2">No connections yet</p>
-                    <p className="text-gray-400 text-sm">
-                      Start connecting with people to begin messaging!
-                    </p>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
+            {/* Chat List */}
+            <div className="lg:col-span-1">
+              <div className="card h-full overflow-hidden">
+                <div className="p-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900">Conversations</h2>
+                    <Link to="/discover" className="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                      New Chat
+                    </Link>
                   </div>
-                ) : (
-                  (allChatUsers || []).map((user) => {
-                    // Find existing chat for this user
-                    const existingChat = (chatRooms || []).find(chat => 
-                      chat.user1Id === user.id || chat.user2Id === user.id
-                    );
-                    
-                    return (
-                      <button
-                        key={user.id}
-                        onClick={() => {
-                          if (existingChat) {
-                            setSelectedChat(existingChat);
-                          } else {
-                            // Create temporary chat for new conversation
-                            const tempChat: ChatRoom = {
-                              id: -1,
-                              user1Id: currentUserId || 1,
-                              user2Id: user.id,
-                              otherUser: user
-                            };
-                            setSelectedChat(tempChat);
-                          }
-                        }}
-                        className={`w-full text-left p-4 rounded-lg transition-all duration-200 border ${
-                          selectedChat?.user2Id === user.id
+                </div>
+                <div className="space-y-2 overflow-y-auto p-4">
+                  {(!allChatUsers || allChatUsers.length === 0) ? (
+                    <div className="flex flex-col items-center justify-center p-8 text-center">
+                      <MessageCircle className="h-12 w-12 text-gray-300 mb-4" />
+                      <p className="text-gray-500 text-lg font-medium mb-2">No connections yet</p>
+                      <p className="text-gray-400 text-sm">
+                        Start connecting with people to begin messaging!
+                      </p>
+                    </div>
+                  ) : (
+                    (allChatUsers || []).map((user) => {
+                      // Find existing chat for this user
+                      const existingChat = (chatRooms || []).find(chat =>
+                        chat.user1Id === user.id || chat.user2Id === user.id
+                      );
+
+                      return (
+                        <button
+                          key={user.id}
+                          onClick={() => {
+                            if (existingChat) {
+                              setSelectedChat(existingChat);
+                            } else {
+                              // Create temporary chat for new conversation
+                              const tempChat: ChatRoom = {
+                                id: -1,
+                                user1Id: currentUserId || 1,
+                                user2Id: user.id,
+                                otherUser: user
+                              };
+                              setSelectedChat(tempChat);
+                            }
+                          }}
+                          className={`w-full text-left p-4 rounded-lg transition-all duration-200 border ${selectedChat?.user2Id === user.id
                             ? 'bg-primary-50 border-primary-200 shadow-sm'
                             : 'hover:bg-gray-50 border-transparent hover:border-gray-200'
-                        }`}
-                      >
-                        <div className="flex items-center">
-                          {user.profilePhotoUrl ? (
-                            <img
-                              src={user.profilePhotoUrl}
-                              alt={user.name}
-                              className="w-12 h-12 rounded-full object-cover mr-3"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full mr-3 flex items-center justify-center">
-                              <User className="h-6 w-6 text-white" />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-1">
-                              <p className="text-sm font-semibold text-gray-900 truncate">
-                                {user.name}
-                              </p>
-                              {existingChat?.lastMessage && (
-                                <span className="text-xs text-gray-400">
-                                  {new Date(existingChat.lastMessage.createdAt).toLocaleDateString()}
-                                </span>
+                            }`}
+                        >
+                          <div className="flex items-center">
+                            {user.profilePhotoUrl ? (
+                              <img
+                                src={user.profilePhotoUrl}
+                                alt={user.name}
+                                className="w-12 h-12 rounded-full object-cover mr-3"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full mr-3 flex items-center justify-center">
+                                <User className="h-6 w-6 text-white" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-1">
+                                <p className="text-sm font-semibold text-gray-900 truncate">
+                                  {user.name}
+                                </p>
+                                {existingChat?.lastMessage && (
+                                  <span className="text-xs text-gray-400">
+                                    {new Date(existingChat.lastMessage.createdAt).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                              {existingChat?.lastMessage ? (
+                                <p className="text-sm text-gray-600 truncate">
+                                  {existingChat.lastMessage.content}
+                                </p>
+                              ) : (
+                                <p className="text-sm text-gray-400 italic">
+                                  Start a conversation
+                                </p>
                               )}
                             </div>
-                            {existingChat?.lastMessage ? (
-                              <p className="text-sm text-gray-600 truncate">
-                                {existingChat.lastMessage.content}
-                              </p>
-                            ) : (
-                              <p className="text-sm text-gray-400 italic">
-                                Start a conversation
-                              </p>
-                            )}
                           </div>
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Chat Area */}
-          <div className="lg:col-span-2">
-            {selectedChat ? (
-              <div className="card h-full flex flex-col">
-                {/* Chat Header */}
-                <div className="flex items-center p-4 border-b border-gray-200">
-                  {selectedChat.otherUser?.profilePhotoUrl ? (
-                    <img
-                      src={selectedChat.otherUser.profilePhotoUrl}
-                      alt={selectedChat.otherUser.name}
-                      className="w-10 h-10 rounded-full object-cover mr-3"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 bg-gray-300 rounded-full mr-3 flex items-center justify-center">
-                      <User className="h-5 w-5 text-gray-600" />
+            {/* Chat Area */}
+            <div className="lg:col-span-2">
+              {selectedChat ? (
+                <div className="card h-full flex flex-col">
+                  {/* Chat Header */}
+                  <div className="flex items-center p-4 border-b border-gray-200">
+                    {selectedChat.otherUser?.profilePhotoUrl ? (
+                      <img
+                        src={selectedChat.otherUser.profilePhotoUrl}
+                        alt={selectedChat.otherUser.name}
+                        className="w-10 h-10 rounded-full object-cover mr-3"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-gray-300 rounded-full mr-3 flex items-center justify-center">
+                        <User className="h-5 w-5 text-gray-600" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {selectedChat.otherUser?.name || 'Unknown User'}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {selectedChat.otherUser?.location || 'Unknown Location'}
+                      </p>
                     </div>
-                  )}
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {selectedChat.otherUser?.name || 'Unknown User'}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {selectedChat.otherUser?.location || 'Unknown Location'}
-                    </p>
+                    <div className="flex items-center space-x-2">
+                      {connectionStatus === 'accepted' ? (
+                        <div className="flex items-center space-x-1 text-green-600">
+                          <UserCheck className="h-4 w-4" />
+                          <span className="text-sm font-medium">Connected</span>
+                        </div>
+                      ) : connectionStatus === 'pending' ? (
+                        <div className="flex items-center space-x-1 text-yellow-600">
+                          <Clock className="h-4 w-4" />
+                          <span className="text-sm font-medium">Pending</span>
+                        </div>
+                      ) : connectionStatus === 'rejected' ? (
+                        <div className="flex items-center space-x-1 text-red-600">
+                          <Lock className="h-4 w-4" />
+                          <span className="text-sm font-medium">Rejected</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-1 text-gray-600">
+                          <User className="h-4 w-4" />
+                          <span className="text-sm font-medium">No Connection</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    {connectionStatus === 'accepted' ? (
-                      <div className="flex items-center space-x-1 text-green-600">
-                        <UserCheck className="h-4 w-4" />
-                        <span className="text-sm font-medium">Connected</span>
-                      </div>
-                    ) : connectionStatus === 'pending' ? (
-                      <div className="flex items-center space-x-1 text-yellow-600">
-                        <Clock className="h-4 w-4" />
-                        <span className="text-sm font-medium">Pending</span>
-                      </div>
-                    ) : connectionStatus === 'rejected' ? (
-                      <div className="flex items-center space-x-1 text-red-600">
-                        <Lock className="h-4 w-4" />
-                        <span className="text-sm font-medium">Rejected</span>
+
+                  {/* Messages */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {messages.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center">
+                        <MessageCircle className="h-12 w-12 text-gray-300 mb-4" />
+                        <p className="text-gray-500 text-lg font-medium mb-2">No messages yet</p>
+                        <p className="text-gray-400 text-sm">
+                          Start the conversation by sending your first message!
+                        </p>
                       </div>
                     ) : (
-                      <div className="flex items-center space-x-1 text-gray-600">
-                        <User className="h-4 w-4" />
-                        <span className="text-sm font-medium">No Connection</span>
+                      Array.isArray(messages) ? messages.map((message) => {
+                        const isOwnMessage = message.senderId === currentUserId;
+                        const isTemporaryMessage = message.isTemporary || message.id.toString().startsWith('temp_');
+                        return (
+                          <div
+                            key={message.id}
+                            className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div
+                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isOwnMessage
+                                ? isTemporaryMessage
+                                  ? 'bg-primary-400 text-white opacity-75'
+                                  : 'bg-primary-600 text-white'
+                                : 'bg-gray-200 text-gray-900'
+                                }`}
+                            >
+                              <p className="text-sm">{message.content}</p>
+                              <div className={`text-xs mt-1 flex items-center ${isOwnMessage ? 'text-primary-100' : 'text-gray-500'
+                                }`}>
+                                {new Date(message.createdAt).toLocaleTimeString()}
+                                {isTemporaryMessage && (
+                                  <span className="ml-2 text-xs">Sending...</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }) : (
+                        <div className="flex flex-col items-center justify-center h-full text-center">
+                          <MessageCircle className="h-12 w-12 text-gray-300 mb-4" />
+                          <p className="text-gray-500 text-lg font-medium mb-2">Loading messages...</p>
+                        </div>
+                      )
+                    )}
+                  </div>
+
+                  {/* Message Input */}
+                  <div className="p-4 border-t border-gray-200">
+                    {canMessage || connectionStatus === 'accepted' ? (
+                      <form onSubmit={handleSendMessage}>
+                        <div className="flex space-x-2">
+                          <input
+                            type="text"
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            placeholder={sendingMessage ? "Sending message..." : "Type a message..."}
+                            disabled={sendingMessage}
+                            className="flex-1 input-field"
+                          />
+                          <button
+                            type="submit"
+                            disabled={sendingMessage || !newMessage.trim()}
+                            className="btn-primary flex items-center disabled:opacity-50"
+                          >
+                            {sendingMessage ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            ) : (
+                              <Send className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-center space-x-2 text-gray-600">
+                          {connectionStatus === 'pending' ? (
+                            <>
+                              <Clock className="h-5 w-5" />
+                              <span>Connection pending - messaging not available yet</span>
+                            </>
+                          ) : connectionStatus === 'rejected' ? (
+                            <>
+                              <Lock className="h-5 w-5" />
+                              <span>Connection rejected - messaging not available</span>
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck className="h-5 w-5" />
+                              <span>Connection required to message this user</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
-
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center">
-                      <MessageCircle className="h-12 w-12 text-gray-300 mb-4" />
-                      <p className="text-gray-500 text-lg font-medium mb-2">No messages yet</p>
-                      <p className="text-gray-400 text-sm">
-                        Start the conversation by sending your first message!
+              ) : (
+                <div className="card h-full flex items-center justify-center">
+                  <div className="text-center max-w-md mx-auto">
+                    <div className="mb-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+                        <MessageCircle className="h-10 w-10 text-white" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        Start a Conversation
+                      </h3>
+                      <p className="text-gray-600 mb-6">
+                        Select a conversation from the left to start chatting, or discover new people to connect with.
                       </p>
                     </div>
-                  ) : (
-                    Array.isArray(messages) ? messages.map((message) => {
-                      const isOwnMessage = message.senderId === currentUserId;
-                      const isTemporaryMessage = message.isTemporary || message.id.toString().startsWith('temp_');
-                      return (
-                        <div
-                          key={message.id}
-                          className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div
-                            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                              isOwnMessage
-                                ? isTemporaryMessage 
-                                  ? 'bg-primary-400 text-white opacity-75'
-                                  : 'bg-primary-600 text-white'
-                                : 'bg-gray-200 text-gray-900'
-                            }`}
-                          >
-                            <p className="text-sm">{message.content}</p>
-                            <div className={`text-xs mt-1 flex items-center ${
-                              isOwnMessage ? 'text-primary-100' : 'text-gray-500'
-                            }`}>
-                              {new Date(message.createdAt).toLocaleTimeString()}
-                              {isTemporaryMessage && (
-                                <span className="ml-2 text-xs">Sending...</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }) : (
-                      <div className="flex flex-col items-center justify-center h-full text-center">
-                        <MessageCircle className="h-12 w-12 text-gray-300 mb-4" />
-                        <p className="text-gray-500 text-lg font-medium mb-2">Loading messages...</p>
-                      </div>
-                    )
-                  )}
-                </div>
 
-                {/* Message Input */}
-                <div className="p-4 border-t border-gray-200">
-                  {canMessage || connectionStatus === 'accepted' ? (
-                    <form onSubmit={handleSendMessage}>
-                      <div className="flex space-x-2">
-                        <input
-                          type="text"
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          placeholder={sendingMessage ? "Sending message..." : "Type a message..."}
-                          disabled={sendingMessage}
-                          className="flex-1 input-field"
-                        />
-                        <button
-                          type="submit"
-                          disabled={sendingMessage || !newMessage.trim()}
-                          className="btn-primary flex items-center disabled:opacity-50"
-                        >
-                          {sendingMessage ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          ) : (
-                            <Send className="h-4 w-4" />
-                          )}
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center space-x-2 text-gray-600">
-                        {connectionStatus === 'pending' ? (
-                          <>
-                            <Clock className="h-5 w-5" />
-                            <span>Connection pending - messaging not available yet</span>
-                          </>
-                        ) : connectionStatus === 'rejected' ? (
-                          <>
-                            <Lock className="h-5 w-5" />
-                            <span>Connection rejected - messaging not available</span>
-                          </>
-                        ) : (
-                          <>
-                            <UserCheck className="h-5 w-5" />
-                            <span>Connection required to message this user</span>
-                          </>
-                        )}
-                      </div>
+                    <div className="space-y-3">
+                      <Link to="/discover" className="btn-primary w-full flex items-center justify-center">
+                        <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Discover People
+                      </Link>
+
+                      <Link to="/dashboard" className="btn-secondary w-full flex items-center justify-center">
+                        <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        View Connections
+                      </Link>
                     </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="card h-full flex items-center justify-center">
-                <div className="text-center max-w-md mx-auto">
-                  <div className="mb-6">
-                    <div className="w-20 h-20 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-                      <MessageCircle className="h-10 w-10 text-white" />
+
+                    <div className="mt-8 pt-6 border-t border-gray-200">
+                      <p className="text-sm text-gray-500">
+                        💡 <strong>Tip:</strong> Only accepted connections can message each other.
+                        Start by connecting with people you'd like to chat with!
+                      </p>
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      Start a Conversation
-                    </h3>
-                    <p className="text-gray-600 mb-6">
-                      Select a conversation from the left to start chatting, or discover new people to connect with.
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <Link to="/discover" className="btn-primary w-full flex items-center justify-center">
-                      <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                      Discover People
-                    </Link>
-                    
-                    <Link to="/dashboard" className="btn-secondary w-full flex items-center justify-center">
-                      <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-                      View Connections
-                    </Link>
-                  </div>
-                  
-                  <div className="mt-8 pt-6 border-t border-gray-200">
-                    <p className="text-sm text-gray-500">
-                      💡 <strong>Tip:</strong> Only accepted connections can message each other. 
-                      Start by connecting with people you'd like to chat with!
-                    </p>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
   } catch (error) {
     console.error('❌ Messages component error:', error);
     return (
@@ -706,8 +717,8 @@ const Messages: React.FC = () => {
         <div className="text-center">
           <div className="text-red-500 text-xl mb-4">⚠️ Error</div>
           <p className="text-gray-600 mb-4">Something went wrong. Please reload the page.</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="btn-primary"
           >
             Reload Page

@@ -38,12 +38,12 @@ const Dashboard: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       console.log('🔄 Loading dashboard data...');
-      
+
       // Load user profile
       console.log('🔍 Getting profile...');
       const { data: profileData, error: profileError } = await profileService.getProfile();
       console.log('📋 Profile response:', { profileData, profileError });
-      
+
       if (profileError && profileError.message === 'Profile not found') {
         console.log('ℹ️ No profile found - user needs to create one');
         setProfile(null);
@@ -58,18 +58,18 @@ const Dashboard: React.FC = () => {
       const { data: allProfiles } = await profileService.getAllProfiles();
       const { data: matches } = await matchingService.getMatches();
       const { data: savedProfiles } = await savedProfilesService.getSavedProfiles();
-      
+
       // Load connections
       console.log('🔗 Loading connections...');
       const { data: sentConnectionsData, error: sentError } = await connectionsService.getSentConnections();
       const { data: receivedConnectionsData, error: receivedError } = await connectionsService.getReceivedConnections();
-      
+
       if (sentError) {
         console.error('❌ Error loading sent connections:', sentError);
       } else {
         console.log('✅ Sent connections loaded:', sentConnectionsData?.length || 0);
       }
-      
+
       if (receivedError) {
         console.error('❌ Error loading received connections:', receivedError);
       } else {
@@ -109,31 +109,31 @@ const Dashboard: React.FC = () => {
     try {
       setConnectionLoading(true);
       const { error } = await connectionsService.acceptConnection(connectionId);
-      
+
       if (error) {
         throw error;
       }
-      
+
       toast.success('Connection accepted!');
-      
+
       // Update the local state immediately for better UX
-      setReceivedConnections(prev => 
-        prev.map(conn => 
-          conn.id === connectionId 
+      setReceivedConnections(prev =>
+        prev.map(conn =>
+          conn.id === connectionId
             ? { ...conn, status: 'accepted' }
             : conn
         )
       );
-      
+
       // Also update sent connections if this affects the other user's view
-      setSentConnections(prev => 
-        prev.map(conn => 
-          conn.id === connectionId 
+      setSentConnections(prev =>
+        prev.map(conn =>
+          conn.id === connectionId
             ? { ...conn, status: 'accepted' }
             : conn
         )
       );
-      
+
       // Reload data to ensure consistency
       loadDashboardData();
     } catch (error: any) {
@@ -147,31 +147,31 @@ const Dashboard: React.FC = () => {
     try {
       setConnectionLoading(true);
       const { error } = await connectionsService.rejectConnection(connectionId);
-      
+
       if (error) {
         throw error;
       }
-      
+
       toast.success('Connection rejected!');
-      
+
       // Update the local state immediately for better UX
-      setReceivedConnections(prev => 
-        prev.map(conn => 
-          conn.id === connectionId 
+      setReceivedConnections(prev =>
+        prev.map(conn =>
+          conn.id === connectionId
             ? { ...conn, status: 'rejected' }
             : conn
         )
       );
-      
+
       // Also update sent connections if this affects the other user's view
-      setSentConnections(prev => 
-        prev.map(conn => 
-          conn.id === connectionId 
+      setSentConnections(prev =>
+        prev.map(conn =>
+          conn.id === connectionId
             ? { ...conn, status: 'rejected' }
             : conn
         )
       );
-      
+
       // Reload data to ensure consistency
       loadDashboardData();
     } catch (error: any) {
@@ -191,13 +191,13 @@ const Dashboard: React.FC = () => {
     try {
       console.log('🔍 Loading profile for userId:', userId);
       const { data: profileData, error } = await profileService.getProfile(userId);
-      
+
       if (error) {
         console.error('❌ Failed to load profile:', error);
         toast.error('Failed to load profile');
         return;
       }
-      
+
       if (profileData) {
         console.log('✅ Profile loaded:', profileData);
         setSelectedProfile(profileData);
@@ -213,18 +213,18 @@ const Dashboard: React.FC = () => {
     try {
       setConnectionLoading(true);
       const { error } = await connectionsService.rejectConnection(connectionId);
-      
+
       if (error) {
         throw error;
       }
-      
+
       toast.success('Connection request withdrawn!');
-      
+
       // Update the local state immediately for better UX
-      setSentConnections(prev => 
+      setSentConnections(prev =>
         prev.filter(conn => conn.id !== connectionId)
       );
-      
+
       // Reload data to ensure consistency
       loadDashboardData();
     } catch (error: any) {
@@ -264,17 +264,17 @@ const Dashboard: React.FC = () => {
   const getFilteredConnections = () => {
     const connections = activeTab === 'sent' ? sentConnections : receivedConnections;
     let filtered = connections.filter(conn => conn.status === activeStatus);
-    
+
     if (searchTerm) {
       filtered = filtered.filter(conn => {
         const user = activeTab === 'sent' ? conn.receiver : conn.requester;
         const name = user?.profile?.name || '';
         const email = user?.email || '';
-        return name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-               email.toLowerCase().includes(searchTerm.toLowerCase());
+        return name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          email.toLowerCase().includes(searchTerm.toLowerCase());
       });
     }
-    
+
     return filtered;
   };
 
@@ -333,56 +333,56 @@ const Dashboard: React.FC = () => {
         {/* Connection Management */}
         <div className="card mb-8">
           {/* Tab Navigation */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 space-y-4 md:space-y-0">
+            <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg self-start md:self-auto overflow-x-auto max-w-full">
               <button
                 onClick={() => setActiveTab('sent')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'sent'
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'sent'
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 My Requests
               </button>
               <button
                 onClick={() => setActiveTab('received')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'received'
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'received'
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 Received Requests
               </button>
             </div>
-            
-            <div className="flex items-center space-x-3">
-              <div className="relative">
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
+              <div className="relative flex-grow sm:flex-grow-0">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by name or email..."
+                  placeholder="Search..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Filters
-              </button>
-              <button
-                onClick={loadDashboardData}
-                disabled={loading}
-                className="flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex-1 sm:flex-none flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 bg-white"
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filters
+                </button>
+                <button
+                  onClick={loadDashboardData}
+                  disabled={loading}
+                  className="flex-1 sm:flex-none flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50 bg-white"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+              </div>
             </div>
           </div>
 
@@ -394,31 +394,28 @@ const Dashboard: React.FC = () => {
                 <>
                   <button
                     onClick={() => setActiveStatus('pending')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeStatus === 'pending'
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeStatus === 'pending'
                         ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     Pending ({counts.pending})
                   </button>
                   <button
                     onClick={() => setActiveStatus('accepted')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeStatus === 'accepted'
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeStatus === 'accepted'
                         ? 'bg-green-100 text-green-800 border border-green-200'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     Accepted ({counts.accepted})
                   </button>
                   <button
                     onClick={() => setActiveStatus('rejected')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeStatus === 'rejected'
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeStatus === 'rejected'
                         ? 'bg-red-100 text-red-800 border border-red-200'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     Rejected ({counts.rejected})
                   </button>
@@ -454,14 +451,14 @@ const Dashboard: React.FC = () => {
                         <User className="h-12 w-12 text-gray-300 mb-3" />
                         <p className="text-gray-500 text-lg font-medium">No {activeStatus} requests found</p>
                         <p className="text-gray-400 text-sm mt-1">
-                          {activeTab === 'sent' 
-                            ? 'You haven\'t sent any connection requests yet.' 
+                          {activeTab === 'sent'
+                            ? 'You haven\'t sent any connection requests yet.'
                             : 'No one has sent you connection requests yet.'
                           }
                         </p>
                         {activeTab === 'sent' && (
-                          <Link 
-                            to="/discover" 
+                          <Link
+                            to="/discover"
                             className="mt-3 text-blue-600 hover:text-blue-500 text-sm font-medium"
                           >
                             Start connecting →
@@ -519,7 +516,7 @@ const Dashboard: React.FC = () => {
                               <Eye className="h-4 w-4 mr-1" />
                               View Profile
                             </button>
-                            
+
                             {/* Status-specific actions */}
                             {activeTab === 'received' && connection.status === 'pending' ? (
                               <>
@@ -611,7 +608,7 @@ const Dashboard: React.FC = () => {
                   </Link>
                 </div>
               )}
-              
+
               {stats.savedProfiles > 0 && (
                 <div className="p-4 bg-yellow-50 rounded-lg">
                   <h4 className="font-medium text-yellow-900 mb-2">Saved Profiles</h4>
@@ -623,7 +620,7 @@ const Dashboard: React.FC = () => {
                   </Link>
                 </div>
               )}
-              
+
               {stats.connections > 0 && (
                 <div className="p-4 bg-green-50 rounded-lg">
                   <h4 className="font-medium text-green-900 mb-2">Active Connections</h4>
@@ -635,7 +632,7 @@ const Dashboard: React.FC = () => {
                   </Link>
                 </div>
               )}
-              
+
               {stats.matches > 0 && (
                 <div className="p-4 bg-red-50 rounded-lg">
                   <h4 className="font-medium text-red-900 mb-2">New Matches</h4>
@@ -813,10 +810,10 @@ const Dashboard: React.FC = () => {
                           <div>
                             <p className="text-sm font-medium text-gray-500">Drinking</p>
                             <p className="text-gray-900 font-medium">
-                              {selectedProfile.drinking === 'no' ? 'Non-drinker' : 
-                               selectedProfile.drinking === 'occasionally' ? 'Occasionally' :
-                               selectedProfile.drinking === 'socially' ? 'Socially' :
-                               selectedProfile.drinking === 'regularly' ? 'Regularly' : selectedProfile.drinking}
+                              {selectedProfile.drinking === 'no' ? 'Non-drinker' :
+                                selectedProfile.drinking === 'occasionally' ? 'Occasionally' :
+                                  selectedProfile.drinking === 'socially' ? 'Socially' :
+                                    selectedProfile.drinking === 'regularly' ? 'Regularly' : selectedProfile.drinking}
                             </p>
                           </div>
                         </div>

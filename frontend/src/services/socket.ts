@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import { tokenStorage } from '../utils/supabase';
 
-const API_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:5000';
+import { API_URL } from '../config';
 
 class SocketService {
   private socket: Socket | null = null;
@@ -15,7 +15,7 @@ class SocketService {
     const token = tokenStorage.getToken();
     console.log('🔌 Connecting to socket:', API_URL);
     console.log('🔌 Token available:', !!token);
-    
+
     this.socket = io(API_URL, {
       auth: {
         token: token
