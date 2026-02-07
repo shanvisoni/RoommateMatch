@@ -42,6 +42,9 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
       });
     }
 
+
+
+    
     const userId = req.user!.id;
     const fileExtension = path.extname(req.file.originalname);
     const fileName = `profile_${userId}_${Date.now()}${fileExtension}`;
